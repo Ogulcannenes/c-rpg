@@ -1,0 +1,17 @@
+{
+  "id": "std_array_intro",
+  "version": "1.0.0",
+  "title": {"tr": "STL: std::array", "ru": "STL: std::array"},
+  "description": {"tr": "Sabit uzunluklu güvenli dizileri keşfet.", "ru": "Изучи безопасные массивы фиксированной длины."},
+  "permissions": ["lessons.read"],
+  "lessons": [
+    {
+      "id": "array_basics",
+      "title": {"tr": "std::array temelleri", "ru": "Основы std::array"},
+      "content": {
+        "tr": "std::array<int, 3> scores{10, 20, 30}; boyutu türün parçası olan sabit uzunluklu bir dizidir. size() eleman sayısını verir; at(index) sınır dışı erişimde hata bildirir.\n\n#include <array>\nstd::array<int, 3> scores{10, 20, 30};\nstd::cout << scores.at(1);",
+        "ru": "std::array<int, 3> scores{10, 20, 30}; — массив фиксированного размера, размер которого является частью типа. size() возвращает число элементов, а at(index) сообщает об ошибке при выходе за границы.\n\n#include <array>\nstd::array<int, 3> scores{10, 20, 30};\nstd::cout << scores.at(1);"
+      }
+    }
+  ]
+}

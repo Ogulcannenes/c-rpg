@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 900" role="img" aria-labelledby="title desc">
+  <title id="title">C++ Adventure illustrated world map</title>
+  <desc id="desc">A hand-drawn fantasy coding world with a forest, village, dungeon, mountains, libraries and a final boss fortress.</desc>
+  <defs>
+    <linearGradient id="sea" x2="0" y2="1"><stop stop-color="#18294a"/><stop offset="1" stop-color="#101526"/></linearGradient>
+    <linearGradient id="land" x2="0.8" y2="1"><stop stop-color="#476e63"/><stop offset=".48" stop-color="#345a57"/><stop offset="1" stop-color="#293c51"/></linearGradient>
+    <linearGradient id="gold" x2="0" y2="1"><stop stop-color="#ffe19a"/><stop offset="1" stop-color="#da945b"/></linearGradient>
+    <linearGradient id="boss" x2="0" y2="1"><stop stop-color="#76416c"/><stop offset="1" stop-color="#3a284d"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="9" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="stars" width="190" height="150" patternUnits="userSpaceOnUse"><circle cx="22" cy="33" r="1.6" fill="#e4d2ff" opacity=".55"/><circle cx="132" cy="95" r="1.2" fill="#9bd8ee" opacity=".5"/><path d="M83 20v8m-4-4h8" stroke="#cba6ff" stroke-width="1" opacity=".4"/></pattern>
+    <g id="pine"><path d="M0 38 16 9l16 29z" fill="#78ad82"/><path d="M4 26 16 3l13 23z" fill="#93c792"/><path d="M13 37h7v16h-7z" fill="#8b6654"/><path d="m3 40 13 6 14-6" fill="none" stroke="#b9d78d" stroke-width="2" opacity=".6"/></g>
+    <g id="mountain"><path d="m0 92 65-82 60 82z" fill="#67779a"/><path d="m45 35 20-25 24 34-18-8-12 8z" fill="#e8e7f2"/><path d="m64 10-8 31 12-7 10 7z" fill="#c1d5e8"/><path d="m0 92 40-48 25 48" fill="#506785" opacity=".7"/></g>
+    <g id="house"><path d="M0 28 35 3l37 25v43H0z" fill="#b77e61" stroke="#f1c88b" stroke-width="3"/><path d="M-5 29 35 0l43 29-6 8-37-25L1 37z" fill="#574165" stroke="#d89bca" stroke-width="3"/><path d="M29 47h16v24H29zM9 40h12v12H9zm39 0h14v12H48z" fill="#f6d27f"/><path d="M35 7v15" stroke="#fff1bd" stroke-width="3"/></g>
+    <g id="crystal"><path d="m24 0 22 31-9 44-32-8L0 31z" fill="#84d9db" stroke="#b7ffff" stroke-width="3"/><path d="m24 0-2 40 15 35 9-44z" fill="#a68bff" opacity=".8"/><path d="m22 40-17 27 32 8z" fill="#5aa9c4"/></g>
+    <g id="cat">
+      <path d="M8 40 10 8l22 17L54 7l4 36c12 10 13 28 2 39-17 17-55 10-60-10-3-12 1-24 8-32z" fill="#e2a266" stroke="#ffe0a9" stroke-width="4"/>
+      <path d="m15 20 1 12 11-7zm31 0 1 12-12-7z" fill="#e98c9e"/>
+      <ellipse cx="25" cy="49" rx="3.5" ry="5" fill="#182235"/><ellipse cx="47" cy="49" rx="3.5" ry="5" fill="#182235"/>
+      <path d="m32 61 5-4 5 4-5 5z" fill="#d67578"/><path d="M37 65q-5 9-11 2m11-2q5 9 11 2" fill="none" stroke="#714958" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M15 61 0 57m16 10L1 70m56-9 15-5m-15 13 15 2" stroke="#fff0d3" stroke-width="2" stroke-linecap="round"/>
+      <path d="M23 39q7-8 14 0m2 0q7-8 14 0" fill="none" stroke="#fff0d3" stroke-width="3"/>
+    </g>
+    <g id="shield"><path d="M25 0 48 9v20c0 17-11 28-23 35C13 57 2 46 2 29V9z" fill="#a95876" stroke="#ffd49b" stroke-width="3"/><path d="m14 31 8 8 15-19" fill="none" stroke="#fff2ce" stroke-width="4"/></g>
+  </defs>
+  <rect width="1500" height="900" fill="url(#sea)"/><rect width="1500" height="900" fill="url(#stars)"/>
+  <path d="M56 239Q115 98 303 105t234 89q125-83 255-19t232 11q155-100 302-10t117 193q75 140-53 251 40 151-96 202t-264-20q-147 106-292 37t-250 42q-135 83-250 5t-72-185Q17 573 78 450T56 239z" fill="#16263c" opacity=".8" transform="translate(0 18)"/>
+  <path d="M56 239Q115 98 303 105t234 89q125-83 255-19t232 11q155-100 302-10t117 193q75 140-53 251 40 151-96 202t-264-20q-147 106-292 37t-250 42q-135 83-250 5t-72-185Q17 573 78 450T56 239z" fill="url(#land)" stroke="#92c6a1" stroke-width="7"/>
+  <path d="M47 247Q177 143 281 183t169 21q131 89 270 14t193 6q115 91 255 1t245 113q-54 112-147 134t-113 117q-21 111-146 120t-233-30q-97 96-202 40t-196 27q-132 30-177-75t34-176q68-83 14-158T47 247z" fill="none" stroke="#9dd6be" stroke-width="3" stroke-dasharray="4 15" opacity=".45"/>
+  <path d="M83 500q123-66 245-5t243-50q132-40 244 22t220 2q138-61 244 28" fill="none" stroke="#6dc9db" stroke-width="16" opacity=".38"/>
+  <path d="M83 500q123-66 245-5t243-50q132-40 244 22t220 2q138-61 244 28" fill="none" stroke="#9de6ed" stroke-width="3" stroke-dasharray="7 10" opacity=".6"/>
+  <!-- Forest and starter camp -->
+  <g opacity=".95"><use href="#pine" x="138" y="160"/><use href="#pine" x="184" y="139"/><use href="#pine" x="236" y="172"/><use href="#pine" x="280" y="147"/><use href="#pine" x="322" y="189"/><use href="#pine" x="195" y="217"/><use href="#pine" x="249" y="230"/><use href="#pine" x="294" y="218"/><use href="#pine" x="358" y="160"/></g>
+  <g transform="translate(94 347)"><use href="#house"/><use href="#house" x="74" y="30" transform="scale(.82)"/><circle cx="45" cy="83" r="27" fill="#f4d38d" opacity=".19"/><path d="M45 74v20m-10-10h20" stroke="#f4d38d" stroke-width="4"/></g>
+  <!-- Conditions and operator village -->
+  <g transform="translate(505 191)"><use href="#house"/><use href="#house" x="80" y="40" transform="scale(.78)"/><path d="M34 94q38-33 78 0" fill="none" stroke="#ffe29c" stroke-width="5"/><circle cx="60" cy="76" r="7" fill="#7ce1c4"/><circle cx="101" cy="76" r="7" fill="#f28d96"/></g>
+  <g transform="translate(1075 170)"><use href="#mountain"/><use href="#mountain" x="67" y="20" transform="scale(.8)"/><path d="m80 125 26-23 23 23-23 25z" fill="#f1c16d" stroke="#fff0b8" stroke-width="3"/><path d="M106 108v34m-17-17h34" stroke="#6f527b" stroke-width="4"/></g>
+  <!-- Loop dungeon -->
+  <g transform="translate(1075 398)"><ellipse cx="74" cy="44" rx="88" ry="53" fill="#211b38" stroke="#9d7ad5" stroke-width="5"/><path d="M25 55q0-34 30-34t30 34m-18 0q0-20 18-20t18 20" fill="none" stroke="#d3a1ff" stroke-width="5"/><path d="M68 57v26m-8-9 8 9 8-9" fill="none" stroke="#e7d4ff" stroke-width="4"/><circle cx="126" cy="35" r="7" fill="#f7c476"/></g>
+  <!-- Function mountains -->
+  <g transform="translate(440 374)"><use href="#mountain"/><use href="#mountain" x="84" y="18" transform="scale(.82)"/><use href="#mountain" x="174" y="9" transform="scale(.72)"/><path d="M55 104q30-34 58 0m-26-26v48m126-37q28-35 55 0m-27-20v45" fill="none" stroke="#f5db9c" stroke-width="4" stroke-linecap="round"/></g>
+  <!-- Arrays and strings -->
+  <g transform="translate(772 337)"><path d="M0 0h205v110H0z" rx="12" fill="#26394c" stroke="#91d5c4" stroke-width="4"/><g fill="#84d9cf" stroke="#c2fff0" stroke-width="2"><rect x="18" y="25" width="38" height="53" rx="5"/><rect x="63" y="25" width="38" height="53" rx="5"/><rect x="108" y="25" width="38" height="53" rx="5"/><rect x="153" y="25" width="38" height="53" rx="5"/></g><g fill="#26394c" font-family="monospace" font-size="18" font-weight="bold"><text x="31" y="57">0</text><text x="76" y="57">1</text><text x="121" y="57">2</text><text x="166" y="57">3</text></g><path d="M18 91h173" stroke="#ffd58a" stroke-width="4" stroke-dasharray="6 6"/></g>
+  <!-- Pointer abyss / memory realm -->
+  <g transform="translate(174 593)"><path d="M0 72 49 0l48 72-24 91H23z" fill="#273650" stroke="#87a2dc" stroke-width="4"/><use href="#crystal" x="24" y="42" transform="scale(.8)"/><path d="M130 21v123m-19-18 19 18 19-18" fill="none" stroke="#d3adff" stroke-width="6"/><circle cx="130" cy="21" r="9" fill="#ffd788"/></g>
+  <!-- Struct and OOP keeps -->
+  <g transform="translate(510 613)"><path d="m0 50 83-48 82 48v94H0z" fill="#614b78" stroke="#e1bdff" stroke-width="4"/><path d="m-10 53 92-58 92 58-12 16-80-49-79 49z" fill="#9c75b9" stroke="#efd5ff" stroke-width="3"/><path d="M65 100h37v44H65zM25 80h24v23H25zm91 0h27v23h-27z" fill="#f7d38e"/><path d="M82 1v48" stroke="#fff0c2" stroke-width="4"/></g>
+  <g transform="translate(875 589)"><path d="m0 46 84-53 84 53v131H0z" fill="url(#boss)" stroke="#ef9bc4" stroke-width="5"/><path d="m-12 48 96-63 96 63-12 19-84-52-84 52z" fill="#805477" stroke="#ffd1a7" stroke-width="4"/><path d="M65 103h39v74H65zM24 79h23v26H24zm92 0h27v26h-27z" fill="#cce8ff"/><path d="M84-5v62" stroke="#ffe3a1" stroke-width="5"/><path d="M84-28v18" stroke="#ffb0c5" stroke-width="4"/><circle cx="84" cy="-36" r="10" fill="#ff839d" filter="url(#glow)"/></g>
+  <!-- local C++ crystals -->
+  <g transform="translate(1302 474)" filter="url(#glow)"><use href="#crystal"/><use href="#crystal" x="55" y="31" transform="scale(.62)"/><use href="#crystal" x="-48" y="37" transform="scale(.56)"/></g>
+  <!-- Professor, debugger, and boss cats -->
+  <g transform="translate(364 284) scale(.75)"><use href="#cat"/><circle cx="24" cy="48" r="9" fill="none" stroke="#d7f3ff" stroke-width="3"/><circle cx="48" cy="48" r="9" fill="none" stroke="#d7f3ff" stroke-width="3"/><path d="M33 48h6" stroke="#d7f3ff" stroke-width="3"/><path d="M24 43q5-6 10 0m10 0q5-6 10 0" fill="none" stroke="#553956" stroke-width="2"/><path d="M14 30 4 17m39 8 9-15" stroke="#f4d48c" stroke-width="5"/></g>
+  <g transform="translate(716 503) scale(.63)"><use href="#cat"/><path d="M20 40h34v19H20z" rx="4" fill="#3c3050" stroke="#ad91ff" stroke-width="3"/><path d="M24 49h8m4 0h10" stroke="#9cf4e4" stroke-width="3"/><path d="m9 27-5-12m52 15 8-11" stroke="#f4d48c" stroke-width="5"/></g>
+  <g transform="translate(1238 687) scale(1.12)"><use href="#cat"/><path d="m12 28 25-24 24 25-12 12-12-15-13 16z" fill="#463452" stroke="#eab8e1" stroke-width="3"/><use href="#shield" x="41" y="60" transform="scale(.42)"/><path d="M11 30 1 20m52 8 11-12" stroke="#f4d48c" stroke-width="5"/></g>
+  <!-- lanterns and path markers -->
+  <g fill="#ffe4a0" opacity=".9"><circle cx="402" cy="468" r="5"/><circle cx="675" cy="302" r="5"/><circle cx="1002" cy="268" r="5"/><circle cx="1195" cy="532" r="5"/><circle cx="426" cy="695" r="5"/></g>
+  <g fill="none" stroke="#ffc77f" stroke-width="4" stroke-linecap="round"><path d="M390 466q15-13 30 0m253-166q15-13 30 0m297-36q15-13 30 0m181 231q15-13 30 0m-790 197q15-13 30 0"/></g>
+</svg>

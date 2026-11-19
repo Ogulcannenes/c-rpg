@@ -1,0 +1,2 @@
+.lab-memory-cell.active{border-color:#71ddc2;background:linear-gradient(130deg,#1a302e,#1a1b29);box-shadow:0 0 0 1px #71ddc244,0 0 18px #71ddc21c}
+.lab-memory-cell.allocated{border-color:#70dfb0}.lab-memory-cell.freed{border-color:#63748b}.lab-memory-cell .value-highlight{color:#74e2bf}

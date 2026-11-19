@@ -1,0 +1,51 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node
+node_modules/
+
+# Build outputs
+build/
+build-*/
+build*
+dist/
+dist-*/
+dist*
+installer/
+*.spec
+
+# Test and audit outputs
+desktop-smoke*/
+build-audit*/
+build-qa*/
+build-cmake*/
+restore-points/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Local databases and user data
+*.db
+*.sqlite
+*.sqlite3
+data/

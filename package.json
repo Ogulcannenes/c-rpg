@@ -1,0 +1,9 @@
+{
+  "name": "cpp-adventure-local-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vendored Monaco editor assets for the offline C++ Adventure app",
+  "dependencies": {
+    "monaco-editor": "0.55.1"
+  }
+}

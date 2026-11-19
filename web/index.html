@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d14"><title>C++ Adventure</title>
+  <link rel="stylesheet" href="/vendor/vs/editor/editor.main.css">
+  <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/cat-companion-ui.css">
+  <link rel="stylesheet" href="/visual-upgrade.css">
+  <link rel="stylesheet" href="/run-panel.css">
+  <link rel="stylesheet" href="/startup-pin.css">
+  <link rel="stylesheet" href="/devtools.css">
+  <link rel="stylesheet" href="/learning.css">
+  <link rel="stylesheet" href="/stats.css">
+  <link rel="stylesheet" href="/algorithm-labs.css">
+  <link rel="stylesheet" href="/project-workshop.css"><link rel="stylesheet" href="/career.css">
+  <link rel="stylesheet" href="/rpg.css">
+  <link rel="stylesheet" href="/advanced-cpp.css">
+  <link rel="stylesheet" href="/arena.css">
+  <link rel="stylesheet" href="/cat-companion-ui.css">
+</head>
+<body>
+<section id="startup-splash" class="startup-splash" role="status" aria-live="polite" aria-label="C++ Adventure startup">
+  <div class="splash-code splash-code-left" aria-hidden="true">#include &lt;iostream&gt;<br>int main() {<br>&nbsp;&nbsp;std::cout &lt;&lt; "adventure";<br>&nbsp;&nbsp;return 0;<br>}</div>
+  <div class="splash-code splash-code-right" aria-hidden="true">while (curiosity) {<br>&nbsp;&nbsp;learn();<br>&nbsp;&nbsp;level_up();<br>}</div>
+  <div class="splash-stars" aria-hidden="true"><i>✦</i><i>·</i><i>✧</i><i>·</i><i>✦</i><i>·</i></div>
+  <div class="splash-content">
+    <div class="splash-mark" aria-hidden="true"><span>&lt;</span><b>C++</b><span>/&gt;</span></div>
+    <div class="splash-title">C++ <strong>ADVENTURE</strong></div>
+    <div class="splash-cat-wrap" aria-hidden="true">
+      <svg class="splash-cat" viewBox="0 0 220 190" role="presentation">
+        <path class="splash-tail" d="M157 145c44 12 46-35 22-45"/>
+        <path class="splash-body" d="M47 153c2-38 25-59 63-59s61 21 63 59v20H47z"/>
+        <path class="splash-ear" d="M57 72 51 22l45 33m21 0 45-33-6 50"/>
+        <path class="splash-face" d="M52 75c0-36 24-59 58-59s58 23 58 59c0 39-26 62-58 62S52 114 52 75Z"/>
+        <path class="splash-inner-ear" d="m63 55-3-20 21 16m65 0 21-16-3 20"/>
+        <path d="M81 78q9-10 18 0m23 0q9-10 18 0" class="splash-eye"/>
+        <path d="m104 91 6 5 6-5q-6-7-12 0Z" class="splash-nose"/>
+        <path d="M110 96v7m0 0q-9 10-18 0m18 0q9 10 18 0" class="splash-mouth"/>
+        <path d="M75 96 42 91m34 12-31 5m100-12 33-5m-33 17 31 5" class="splash-whiskers"/>
+        <path d="M80 142q-8 10-7 28m64-28q8 10 7 28" class="splash-paw-line"/>
+        <path d="M73 165q15 14 30 0m24 0q15 14 30 0" class="splash-paw-line"/>
+      </svg>
+      <span class="splash-orbit orbit-one">⌘</span><span class="splash-orbit orbit-two">{ }</span><span class="splash-orbit orbit-three">✦</span>
+    </div>
+    <div class="splash-progress-copy"><span id="splash-status">Yerel macera başlatılıyor…</span><strong id="splash-percent">0%</strong></div>
+    <div class="splash-progress" role="progressbar" aria-label="Uygulama yükleme ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="splash-progress-bar"></i></div>
+    <button id="splash-retry" class="splash-retry" type="button" hidden>Tekrar dene</button>
+    <div class="splash-credit">Created by Ogulcanenes <span id="splash-version">v…</span></div>
+  </div>
+</section>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#home"><span class="brand-icon">🐈‍⬛</span><span><b>C++ Adventure</b><small>CODE • QUEST • PURR</small></span></a>
+    <div class="profile-card"><div class="avatar">😼</div><div class="profile-copy"><b id="rank">Yeni Çırak</b><span><span data-i="level">Seviye</span> <b id="side-level">1</b> · <span id="side-xp">0 XP</span></span></div><span class="sparkle">✦</span></div>
+    <nav class="nav"><button class="nav-item active" data-view="home"><span>⌂</span><span data-i="home">Ana üs</span></button><button class="nav-item" data-view="map"><span>⌖</span><span data-i="journey">Yolculuk</span></button><button class="nav-item" data-view="stats"><span>▥</span><span data-i="statsNav">İstatistikler</span></button><button class="nav-item" data-view="career"><span>♜</span><span data-career-label>Kariyer ve portföy</span></button><button class="nav-item" data-view="interview"><span>▣</span><span data-interview-label>Mülakat modu</span></button><button class="nav-item" data-view="journal"><span>▤</span><span data-i="journal">Öğrenme günlüğü</span></button><button class="nav-item" data-view="labs"><span>▦</span><span data-i="labsNav">Görsel laboratuvarlar</span></button><button class="nav-item" data-view="devtools"><span>⌘</span><span data-i="devtoolsNav">Geliştirici araçları</span></button><button class="nav-item" data-view="quality"><span>⌘</span><span data-i="qualityNav">Kod laboratuvarı</span></button><button class="nav-item" data-view="advanced"><span>⚡</span><span data-advanced-label>İleri C++</span></button><button class="nav-item" data-view="arena"><span>◈</span><span data-arena-label>Arena ve Eklentiler</span></button><button class="nav-item" data-view="achievements"><span>✧</span><span data-i="badges">Başarımlar</span><i id="badge-count">0</i></button><button class="nav-item" data-view="rpg"><span>♟</span><span data-rpg-label>Lonca ve kedi</span></button><button class="nav-item" data-view="shop"><span>🧶</span><span data-i="shop">Kedi dükkânı</span></button><button class="nav-item" data-view="workshop"><span>⚒</span><span data-i="workshop">Proje atölyesi</span></button></nav>
+    <div class="side-label"><span data-i="curriculum">EĞİTİM HARİTASI</span><span id="chapter-count"></span></div>
+    <div id="chapter-list" class="chapter-list"></div>
+    <div class="side-bottom"><div class="streak"><span>🔥</span><span><b id="streak-count">0</b> <span data-i="streak">günlük seri</span></span></div><div class="local-note"><span class="online-dot"></span><span data-i="local">Tamamen yerel · İnternet gerekmez</span></div></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div class="breadcrumbs"><span>C++ Adventure</span><span class="crumb-sep">/</span><b id="crumb-current" data-i="home">Ana üs</b></div><div class="top-actions"><button id="lang-btn" class="lang-btn" data-i-aria="languageToggleLabel" aria-label="Dili değiştir">🇷🇺 Русский</button><button class="icon-button" id="settings-open" data-i-title="settingsTitle" title="AI / settings" onclick="renderSettings()">⚙</button><button class="icon-button" id="sound-btn" data-i-title="soundTitle" title="Meow">♫</button><button class="top-avatar" id="top-profile" data-i-title="profilesTitle" aria-label="Profiles">🐱</button></div></header>
+    <div id="toast" class="toast" role="status"></div>
+    <section id="view-home" class="view"></section>
+    <section id="view-map" class="view hidden"></section>
+    <section id="view-journal" class="view hidden"></section>
+    <section id="view-quality" class="view hidden"></section>
+    <section id="view-labs" class="view hidden"></section>
+    <section id="view-devtools" class="view hidden"></section>
+    <section id="view-stats" class="view hidden"></section><section id="view-career" class="view hidden"></section><section id="view-interview" class="view hidden"></section>
+    <section id="view-achievements" class="view hidden"></section>
+    <section id="view-shop" class="view hidden"></section>
+    <section id="view-rpg" class="view hidden"></section>
+    <section id="view-advanced" class="view hidden"></section>
+    <section id="view-arena" class="view hidden"></section>
+    <section id="view-workshop" class="view hidden"></section>
+    <section id="view-settings" class="view hidden"></section>
+    <section id="view-lesson" class="view hidden"></section>
+    <footer><span data-i="madeWith">🐾 ve C++ ile yapıldı</span><span><span class="online-dot"></span> <span data-i="private">İlerlemen bu bilgisayarda saklanır</span></span></footer>
+  </main>
+</div>
+<script src="/vendor/vs/loader.js"></script>
+<script>require.config({paths:{vs:'/vendor/vs'}});window.MonacoReady=new Promise(resolve=>require(['vs/editor/editor.main'],()=>resolve(window.monaco)));</script>
+<script src="/i18n.js"></script>
+<script src="/splash.js"></script>
+<script src="/pin-cat.js"></script>
+<script src="/cat-companion-ui.js"></script>
+<script src="/cat-growth.js"></script>
+<script src="/app.js"></script>
+<script src="/algorithm-labs.js"></script>
+<script src="/devtools-ui.js"></script>
+<script src="/learning-ui.js"></script>
+<script src="/study-tracker.js"></script>
+<script src="/stats-ui.js"></script>
+<script src="/project-workshop.js"></script><script src="/career-ui.js"></script>
+<script src="/rpg-ui.js"></script>
+<script src="/advanced-cpp-ui.js"></script>
+<script src="/arena-ui.js"></script>
+</body>
+</html>

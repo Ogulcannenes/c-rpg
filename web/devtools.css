@@ -1,0 +1,11 @@
+.dt-tabs{flex-wrap:wrap;margin:18px 0 12px;gap:8px}
+.dt-tab.active{border-color:#a881ff;background:#38285c;color:#fff}
+#view-devtools label{display:block;margin:10px 0;color:#c5c9da;font-size:12px}
+#view-devtools textarea,#view-devtools input{box-sizing:border-box;width:100%;margin-top:6px;font:12px/1.55 Consolas,"Cascadia Code",monospace;resize:vertical}
+#view-devtools textarea.code-input{min-height:200px;color:#d9e1ff;background:#0d1019}
+#view-devtools pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#aeb5ca;font:12px/1.5 Consolas,monospace}
+#view-devtools .dt-console{min-height:150px;max-height:360px;overflow:auto;margin:12px 0;padding:14px}
+#view-devtools .dt-console pre{margin:4px 0 14px}
+#view-devtools .dt-last{margin-top:12px}
+#view-devtools button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:720px){.dt-tabs .dt-tab{flex:1 1 42%}#view-devtools .two-col{grid-template-columns:1fr}}
