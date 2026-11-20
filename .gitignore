@@ -41,4 +41,25 @@ Desktop.ini
 *.db
 *.sqlite
 *.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
+*.bak
 data/
+
+# Runtime output written next to the sources in dev mode (DATA_ROOT = repo root)
+/backups/
+/logs/
+/student-work/
+/user-plugins/
+/secrets/
+legacy_db_path.txt
+
+# Test tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Claude Code local-only files (agents in .claude/agents are shared and tracked)
+.claude/settings.local.json
+.claude/*.lock
