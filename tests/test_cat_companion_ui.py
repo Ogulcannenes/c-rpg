@@ -17,10 +17,30 @@ class CatCompanionVisualUiTests(unittest.TestCase):
 
     def test_accessory_art_has_separate_layer_for_every_shop_item(self):
         ids = {node.attrib.get("id") for node in self.svg.iter()}
-        for item in ("wizard", "crown", "bow", "headset", "scarf", "moon-cape", "backpack", "raincoat", "yarn", "fish"):
+        for item in ("wizard", "crown", "bow", "headset", "scarf", "moon-cape", "backpack", "raincoat", "yarn", "fish", "shades", "bowtie", "mug", "cape", "wings", "aura"):
             self.assertIn(item, ids)
             self.assertIn(f"{item}", self.script)
         self.assertEqual(self.svg.attrib["viewBox"], "0 0 1199 1312")
+
+    def test_every_shop_item_is_drawn_on_the_cat_and_localized(self):
+        import server
+        for item_id, item in server.SHOP.items():
+            self.assertIn(f"{item_id}:", self.script.replace("'", "").replace('"', "") + self.app_items(), item_id)
+            for lang in ("tr", "ru"):
+                self.assertIn(f"item_{item_id}", self.locales["modules"]["shop"][lang])
+                self.assertIn(f"item_{item_id}_desc", self.locales["modules"]["shop"][lang])
+            self.assertIn(item["slot"], ("head", "ears", "face", "neck", "body", "back", "aura", "toy"))
+
+    def app_items(self):
+        return (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+
+    def test_companion_script_loads_after_app_so_layered_shop_is_not_overridden(self):
+        self.assertLess(self.index.index('/app.js'), self.index.index('/cat-companion-ui.js'))
+
+    def test_rpg_screen_wears_items_on_the_cat_instead_of_emoji_beside_it(self):
+        rpg = (ROOT / "web" / "rpg-ui.js").read_text(encoding="utf-8")
+        self.assertNotIn("rpg-wear", rpg)
+        self.assertIn("catStage(", rpg)
 
     def test_preview_is_client_only_and_dressing_uses_profile_api(self):
         self.assertIn("let previewItems = {}", self.script)

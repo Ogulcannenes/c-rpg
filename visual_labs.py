@@ -130,16 +130,17 @@ def simulate(lab_id, raw, language="tr"):
         try: values=[int(x.strip()) for x in str(raw.get("values","5,2,4,1")).split(",")[:10]] or [0]
         except ValueError: values=[5,2,4,1]
         operation=raw.get("algorithm","bubble_sort");target=_integer(raw,"target",4);current=list(values);frames_values=[list(values)];steps=[copy["steps"][0]];frame_marks=[()];custom_frames=[]
+        line_now=[0];frame_lines=[0]
         def record(text, active=()):
-            steps.append(text);frames_values.append(list(current));frame_marks.append(tuple(active))
+            steps.append(text);frames_values.append(list(current));frame_marks.append(tuple(active));frame_lines.append(line_now[0])
         if operation in ("linear_search", "binary_search"):
             if operation=="binary_search":
                 current.sort();frames_values[0]=list(current)
-                record(("Binary search için değerler küçükten büyüğe sıralandı." if language=="tr" else "Для binary search значения отсортированы по возрастанию."))
+                line_now[0]=1;record(("Binary search için değerler küçükten büyüğe sıralandı." if language=="tr" else "Для binary search значения отсортированы по возрастанию."))
                 low,high,found=0,len(current)-1,-1
                 while low<=high:
                     middle=(low+high)//2
-                    record((f"{low}..{high} aralığının ortası {middle}: {current[middle]} hedefle karşılaştırılıyor." if language=="tr" else f"Середина диапазона {low}..{high} — индекс {middle}: сравнение с целью."), (middle,))
+                    line_now[0]=4;record((f"{low}..{high} aralığının ortası {middle}: {current[middle]} hedefle karşılaştırılıyor." if language=="tr" else f"Середина диапазона {low}..{high} — индекс {middle}: сравнение с целью."), (middle,))
                     if current[middle]==target: found=middle;break
                     if current[middle]<target: low=middle+1
                     else: high=middle-1
@@ -147,7 +148,7 @@ def simulate(lab_id, raw, language="tr"):
             else:
                 found=-1
                 for index,value in enumerate(current):
-                    record((f"İndeks {index}: {value} hedefle karşılaştırıldı." if language=="tr" else f"Индекс {index}: значение {value} сравнено с целью."), (index,))
+                    line_now[0]=2;record((f"İndeks {index}: {value} hedefle karşılaştırıldı." if language=="tr" else f"Индекс {index}: значение {value} сравнено с целью."), (index,))
                     if value==target: found=index;break
                 complexity="O(n)"
             answer=str(found);challenge=copy["search"];final=f"{copy['final']}: {answer} · {('Zaman' if language=='tr' else 'Время')}: {complexity}"
@@ -169,24 +170,24 @@ def simulate(lab_id, raw, language="tr"):
                 for end in range(len(current)-1,0,-1):
                     swapped=False
                     for index in range(end):
-                        left,right=current[index],current[index+1];record((f"{left} ve {right} karşılaştırıldı." if language=="tr" else f"Сравнены {left} и {right}."), (index,index+1))
-                        if left>right: current[index],current[index+1]=right,left;swapped=True;record(("Komşu değerler yer değiştirdi." if language=="tr" else "Соседние значения переставлены."), (index,index+1))
+                        left,right=current[index],current[index+1];line_now[0]=3;record((f"{left} ve {right} karşılaştırıldı." if language=="tr" else f"Сравнены {left} и {right}."), (index,index+1))
+                        if left>right: current[index],current[index+1]=right,left;swapped=True;line_now[0]=4;record(("Komşu değerler yer değiştirdi." if language=="tr" else "Соседние значения переставлены."), (index,index+1))
                     if not swapped:break
             elif operation=="selection_sort":
                 for start in range(len(current)-1):
                     minimum=start
                     for index in range(start+1,len(current)):
-                        record((f"En küçük değer aranıyor: {current[index]} ile {current[minimum]} karşılaştırıldı." if language=="tr" else f"Поиск минимума: {current[index]} сравнено с {current[minimum]}."), (minimum,index))
+                        line_now[0]=3;record((f"En küçük değer aranıyor: {current[index]} ile {current[minimum]} karşılaştırıldı." if language=="tr" else f"Поиск минимума: {current[index]} сравнено с {current[minimum]}."), (minimum,index))
                         if current[index]<current[minimum]:minimum=index
                     if minimum!=start:
-                        current[start],current[minimum]=current[minimum],current[start];record((f"{current[start]} doğru sıraya taşındı." if language=="tr" else f"{current[start]} перемещено на своё место."), (start,minimum))
+                        current[start],current[minimum]=current[minimum],current[start];line_now[0]=4;record((f"{current[start]} doğru sıraya taşındı." if language=="tr" else f"{current[start]} перемещено на своё место."), (start,minimum))
             else:
                 for index in range(1,len(current)):
                     key=current[index];cursor=index-1
-                    record((f"{key} için doğru yer aranıyor." if language=="tr" else f"Поиск места для {key}."), (index,))
+                    line_now[0]=2;record((f"{key} için doğru yer aranıyor." if language=="tr" else f"Поиск места для {key}."), (index,))
                     while cursor>=0 and current[cursor]>key:
-                        current[cursor+1]=current[cursor];record((f"{current[cursor]} bir hücre sağa kaydı." if language=="tr" else f"{current[cursor]} сдвинуто на одну ячейку вправо."), (cursor,cursor+1));cursor-=1
-                    current[cursor+1]=key;record((f"{key}, indeks {cursor+1} konumuna yerleştirildi." if language=="tr" else f"{key} вставлено по индексу {cursor+1}."), (cursor+1,))
+                        current[cursor+1]=current[cursor];line_now[0]=3;record((f"{current[cursor]} bir hücre sağa kaydı." if language=="tr" else f"{current[cursor]} сдвинуто на одну ячейку вправо."), (cursor,cursor+1));cursor-=1
+                    current[cursor+1]=key;line_now[0]=4;record((f"{key}, indeks {cursor+1} konumuna yerleştirildi." if language=="tr" else f"{key} вставлено по индексу {cursor+1}."), (cursor+1,))
             answer=", ".join(str(value) for value in current);challenge=copy["challenge"];complexity="O(n²) worst case";final=f"{copy['final']}: {answer} · {('Zaman' if language=='tr' else 'Время')}: {complexity}"
         cells=_base_cells(current)
     else:
@@ -229,9 +230,192 @@ def simulate(lab_id, raw, language="tr"):
                 frame_cells=_base_cells(values_at_step, frame_marks[min(i,len(frame_marks)-1)])
         frames.append({"index":i,"text":text,"cells":frame_cells})
     prompt=challenge if lab_id in ("algorithms","memory") else copy["challenge"]
-    return {"lab_id":lab_id,"steps":frames,"cells":cells,"final":final,"challenge":{"prompt":prompt,"expected_type":"short answer"},"answer_key":answer}
+    result={"lab_id":lab_id,"steps":frames,"cells":cells,"final":final,"challenge":{"prompt":prompt,"expected_type":"short answer"},"answer_key":answer}
+    return _annotate(lab_id, raw, language, result, locals().get("frame_lines"), locals().get("operation"))
 
 
 def public_result(result):
     """Remove the answer key before sending a simulation to the UI."""
     return {key:value for key,value in result.items() if key!="answer_key"}
+
+
+def _cell(name, value, region="stack", address="", type_="int", **extra):
+    cell = {"name": name, "address": address, "value": value, "type": type_, "region": region}
+    cell.update(extra)
+    return cell
+
+
+def _annotate(lab_id, raw, language, result, frame_lines=None, operation=None):
+    """Add what the animated lab needs: the C++ code being run, the line each step is on,
+    the console output so far, and richer memory cells (frames, heap blocks, pointer links)."""
+    tr = language == "tr"
+    steps = result["steps"]
+    count = len(steps)
+    code, lines, outputs, visual = [], [0] * count, [""] * count, lab_id
+
+    def frames(cell_lists):
+        for i, cells in enumerate(cell_lists[:count]):
+            steps[i]["cells"] = cells
+
+    if lab_id == "variables":
+        start, add = _integer(raw, "start", 3), _integer(raw, "add", 4)
+        code = [f"int puan = {start};", f"puan = puan + {add};", "std::cout << puan;"]
+        lines = [1, 1, 2]
+        frames([[_cell("puan", "?", address="0x1000", status="new", frame="main")],
+                [_cell("puan", start, address="0x1000", frame="main")],
+                [_cell("puan", start + add, address="0x1000", status="changed", frame="main")]])
+        outputs = ["", "", ""]
+        visual = "memory"
+    elif lab_id == "conditions":
+        score, threshold = _integer(raw, "score", 72, 0, 100), _integer(raw, "threshold", 50, 0, 100)
+        passed = score >= threshold
+        code = [f"int score = {score}, threshold = {threshold};", "if (score >= threshold) {", '    std::cout << "true";', "} else {", '    std::cout << "false";', "}"]
+        lines = [1, 2, 3 if passed else 5]
+        outputs = ["", "", "true" if passed else "false"]
+        visual = "branch"
+        for i, step in enumerate(steps):
+            step["branch"] = {"left": score, "right": threshold, "op": ">=", "state": "pending" if i == 0 else "checking" if i == 1 else ("true" if passed else "false")}
+    elif lab_id == "loops":
+        start, end, step_ = _integer(raw, "start", 1, -100, 100), _integer(raw, "end", 5, -100, 100), _integer(raw, "step", 1, 1, 20)
+        values = list(range(start, end + 1, step_))[:30] if start <= end else []
+        code = [f"for (int i = {start}; i <= {end}; i += {step_}) {{", '    std::cout << i << " ";', "}"]
+        lines = [1] + [2] * len(values) + [1]
+        printed = []
+        for i in range(count):
+            if 1 <= i <= len(values):
+                printed.append(str(values[i - 1]))
+            outputs[i] = " ".join(printed)
+            steps[i]["loop"] = {"values": values, "done": min(max(i, 0), len(values)), "finished": i == count - 1}
+        visual = "loop"
+    elif lab_id == "functions":
+        param = _integer(raw, "param", 6)
+        op = raw.get("operation", "double")
+        expr = "x * x" if op == "square" else "x + 3" if op == "add3" else "x * 2"
+        res = param * param if op == "square" else param + 3 if op == "add3" else param * 2
+        code = ["int f(int x) {", f"    return {expr};", "}", "int main() {", f"    int sonuc = f({param});", "    std::cout << sonuc;", "}"]
+        lines = [5, 2, 6]
+        frames([[_cell("sonuc", "?", frame="main()", address="0x2000")],
+                [_cell("sonuc", "?", frame="main()", address="0x2000"), _cell("x", param, frame=f"f({param})", address="0x1FF0", status="new")],
+                [_cell("sonuc", res, frame="main()", address="0x2000", status="changed")]])
+        outputs = ["", "", str(res)]
+        visual = "calls"
+    elif lab_id == "arrays":
+        try:
+            values = [int(x.strip()) for x in str(raw.get("values", "3,5,8")).split(",")[:10]] or [0]
+        except ValueError:
+            values = [3, 5, 8]
+        index = min(_integer(raw, "index", 1, 0, 9), len(values) - 1)
+        code = ["int numbers[] = {" + ", ".join(map(str, values)) + "};", f"// numbers[0] … numbers[{len(values) - 1}]", f"std::cout << numbers[{index}];"]
+        lines = [1, 2, 3]
+        base = [_cell(f"numbers[{i}]", v, "array", f"0x{0x1000 + 4 * i:04X}", index=i) for i, v in enumerate(values)]
+        frames([[dict(c, status="new") for c in base], [dict(c, status="indexed") for c in base], [dict(c, status="active" if c["index"] == index else "") for c in base]])
+        outputs = ["", "", str(values[index])]
+        visual = "array"
+    elif lab_id == "pointers":
+        a, b = _integer(raw, "a", 10), _integer(raw, "b", 20)
+        target = "b" if raw.get("target") == "b" else "a"
+        address = "0x1004" if target == "b" else "0x1000"
+        code = [f"int a = {a}, b = {b};", f"int* ptr = &{target};", "std::cout << *ptr;"]
+        lines = [1, 2, 3]
+        A = _cell("a", a, address="0x1000", frame="main")
+        B = _cell("b", b, address="0x1004", frame="main")
+        frames([[dict(A, status="new"), dict(B, status="new")],
+                [A, B, _cell("ptr", address, address="0x1008", type_="int*", frame="main", points_to=target, status="new")],
+                [dict(A, status="deref" if target == "a" else ""), dict(B, status="deref" if target == "b" else ""), _cell("ptr", address, address="0x1008", type_="int*", frame="main", points_to=target, status="deref-from")]])
+        outputs = ["", "", str(b if target == "b" else a)]
+        visual = "memory"
+    elif lab_id == "memory":
+        scenario = raw.get("scenario", "freed")
+        comment = (lambda t, r: t if tr else r)
+        ptr0 = _cell("ptr", "nullptr", address="0x7FF0", type_="int*", frame="main")
+        ptr1 = _cell("ptr", "0xA000", address="0x7FF0", type_="int*", frame="main", points_to="heap#1")
+        block = _cell("heap#1", 42, "heap", "0xA000", status="allocated")
+        if scenario in ("freed", "leak", "dangling"):
+            visual = "memory"
+            if scenario == "freed":
+                code = ["int* ptr = new int(42);", "std::cout << *ptr;", "delete ptr; ptr = nullptr;"]
+                lines = [1, 1, 3]
+                frames([[ptr0], [ptr1, block], [ptr0, dict(block, value="freed", status="freed")]])
+            elif scenario == "leak":
+                code = ["int* ptr = new int(42);", "ptr = nullptr;  // " + comment("adres kayboldu", "адрес потерян"), "// " + comment("delete yok → sızıntı", "нет delete → утечка")]
+                lines = [1, 1, 2]
+                frames([[ptr0], [ptr1, block], [ptr0, dict(block, status="leak")]])
+            else:
+                code = ["int* ptr = new int(42);", "delete ptr;", "std::cout << *ptr;  // " + comment("tanımsız davranış!", "неопределённое поведение!")]
+                lines = [1, 1, 3]
+                frames([[ptr0], [ptr1, block], [dict(ptr1, status="dangling"), dict(block, value="freed", status="freed")]])
+        elif scenario == "stack":
+            code = ["std::stack<int> s;", "s.push(4);", "s.push(9);", "s.pop();"]
+            lines = [0, 1, 2, 3, 4]
+            states = [[], [], [4], [4, 9], [4]]
+            frames([[_cell(f"s[{i}]", v, "lifo", f"top-{len(items) - 1 - i}", item=f"v{i}") for i, v in enumerate(items)] for items in states])
+            visual = "lifo"
+        elif scenario == "queue":
+            code = ["std::queue<int> q;", "q.push(4); q.push(9);", "q.pop();"]
+            lines = [0, 1, 2, 3]
+            frames([[], [], [_cell("q[0]", 4, "fifo", "front", item="v4"), _cell("q[1]", 9, "fifo", "back", item="v9")], [_cell("q[0]", 9, "fifo", "front", item="v9")]])
+            visual = "fifo"
+        elif scenario == "linked_list":
+            code = ["Node* head = new Node{4};", "head->next = new Node{9};", "// head → 4 → 9 → nullptr"]
+            lines = [0, 1, 2, 3]
+            head0 = _cell("head", "nullptr", address="0x7FF0", type_="Node*", frame="main")
+            head1 = _cell("head", "0xA000", address="0x7FF0", type_="Node*", frame="main", points_to="node1")
+            n1 = _cell("node1", 4, "heap", "0xA000", type_="Node", next="nullptr")
+            n1b = dict(n1, next="0xA010", points_to="node2")
+            n2 = _cell("node2", 9, "heap", "0xA010", type_="Node", next="nullptr", status="new")
+            frames([[head0], [head1, dict(n1, status="new")], [head1, n1b, n2], [dict(head1, status="active"), dict(n1b, status="active"), dict(n2, status="active")]])
+            visual = "memory"
+        else:
+            code = ["int* ptr = nullptr;", "ptr = new int(42);", "delete ptr; ptr = nullptr;"]
+            lines = [0, 1, 2, 3]
+            frames([[], [ptr0], [ptr1, block], [ptr0, dict(block, value="freed", status="freed")]])
+            visual = "memory"
+    elif lab_id == "oop":
+        name = str(raw.get("name", "Luna"))[:20] or "Luna"
+        start = _integer(raw, "level", 1, 1, 99)
+        code = ["class Cat {", "public:", "    std::string name; int level;", "    void levelUp() { ++level; }", "};", f'Cat {name.lower() or "luna"}{{"{name}", {start}}};', f"{name.lower() or 'luna'}.levelUp();"]
+        lines = [1, 6, 7]
+        blueprint = _cell("Cat", "class", "blueprint", "", "class", fields=["name", "level"], methods=["levelUp()"])
+        frames([[blueprint],
+                [blueprint, _cell(f"{name}.name", name, "object", "0x3000", "std::string", frame=name, status="new"), _cell(f"{name}.level", start, "object", "0x3020", frame=name, status="new")],
+                [blueprint, _cell(f"{name}.name", name, "object", "0x3000", "std::string", frame=name), _cell(f"{name}.level", start + 1, "object", "0x3020", frame=name, status="changed")]])
+        visual = "object"
+    elif lab_id == "algorithms":
+        op = operation or "bubble_sort"
+        if op == "recursion":
+            n = _integer(raw, "target", 4, 0, 7)
+            code = ["int factorial(int n) {", "    if (n == 0) return 1;", "    return n * factorial(n - 1);", "}", f"std::cout << factorial({n});"]
+            cell_lists, call_lines = [[]], [5]
+            for v in range(n, 0, -1):
+                cell_lists.append([_cell("n", x, frame=f"factorial({x})", status="new" if x == v else "") for x in range(n, v - 1, -1)])
+                call_lines.append(1 if v == n else 3)
+            cell_lists.append([_cell("n", x, frame=f"factorial({x})") for x in range(n, 0, -1)] + [_cell("return", 1, frame="factorial(0)", status="changed")])
+            call_lines.append(2)
+            acc = 1
+            for v in range(1, n + 1):
+                acc *= v
+                cell_lists.append([_cell("n", x, frame=f"factorial({x})") for x in range(n, v, -1)] + [_cell("return", acc, frame=f"factorial({v})", status="changed")])
+                call_lines.append(3)
+            frames(cell_lists)
+            lines = (call_lines + [3] * count)[:count]
+            outputs = [""] * (count - 1) + [str(acc)]
+            visual = "calls"
+        else:
+            codes = {
+                "bubble_sort": ["for (int end = n - 1; end > 0; --end)", "  for (int i = 0; i < end; ++i)", "    if (a[i] > a[i + 1])", "      std::swap(a[i], a[i + 1]);"],
+                "selection_sort": ["for (int s = 0; s < n - 1; ++s) {", "  int m = s;", "  for (int i = s + 1; i < n; ++i) if (a[i] < a[m]) m = i;", "  std::swap(a[s], a[m]);", "}"],
+                "insertion_sort": ["for (int i = 1; i < n; ++i) {", "  int key = a[i], j = i - 1;", "  while (j >= 0 && a[j] > key) { a[j + 1] = a[j]; --j; }", "  a[j + 1] = key;", "}"],
+                "linear_search": ["for (int i = 0; i < n; ++i)", "  if (a[i] == target) return i;", "return -1;"],
+                "binary_search": ["std::sort(a, a + n);", "int lo = 0, hi = n - 1;", "while (lo <= hi) { int mid = (lo + hi) / 2;", "  if (a[mid] == target) return mid;", "  if (a[mid] < target) lo = mid + 1; else hi = mid - 1; }"],
+            }
+            code = codes.get(op, codes["bubble_sort"])
+            lines = (list(frame_lines or []) + [0] * count)[:count]
+            if op in ("linear_search", "binary_search"):
+                outputs = [""] * (count - 1) + [result["answer_key"]]
+            visual = "bars"
+    for i, step in enumerate(steps):
+        step["line"] = lines[i] if i < len(lines) else 0
+        step["output"] = outputs[i] if i < len(outputs) else ""
+    result["code"] = code
+    result["visual"] = visual
+    return result

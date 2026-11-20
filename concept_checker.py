@@ -29,7 +29,18 @@ RULES = {
     "stl_sort": {"tr": "std::sort ile bir koleksiyonu sırala ve sıralı veriyi kullan", "ru": "Отсортируй коллекцию через std::sort и используй результат"},
     "file_exception": {"tr": "Dosyaya gerçekten yazıp oku ve hatayı try/catch ile yönet", "ru": "Запиши и прочитай файл, обработай ошибку через try/catch"},
     "integrated_project": {"tr": "Fonksiyon, koşul, döngü, değişken ve çıktıyı birlikte kullan", "ru": "Объедини функцию, условие, цикл, переменную и вывод"},
+    'pointer_dynamic': {'tr': 'new/new[] ile bellek ayır, işaretçiyi kullan ve delete/delete[] ile serbest bırak', 'ru': 'Выдели память через new/new[], используй указатель и освободи через delete/delete[]'},
+    'smart_pointer': {'tr': 'std::unique_ptr veya std::shared_ptr kullan; elle new/delete yazma', 'ru': 'Используй std::unique_ptr или std::shared_ptr; не пиши new/delete вручную'},
+    'raii_scope': {'tr': 'Kurucusu ve yıkıcısı olan bir sınıfı blok kapsamında kullan (RAII)', 'ru': 'Используй класс с конструктором и деструктором в блоке (RAII)'},
+    'virtual_dispatch': {'tr': 'virtual metot, override ve taban sınıf işaretçisi/referansıyla çağrı kullan', 'ru': 'Используй virtual-метод, override и вызов через указатель или ссылку на базовый класс'},
+    'template_function': {'tr': 'template ile genel bir fonksiyon yaz ve en az iki farklı türle çağır', 'ru': 'Напиши обобщённую функцию через template и вызови её минимум с двумя типами'},
+    'lambda_capture': {'tr': 'Yakalama listesi ([...]) olan bir lambda kullan', 'ru': 'Используй лямбду со списком захвата ([...])'},
+    'map_set': {'tr': 'std::map veya std::set (ya da unordered sürümleri) kullan ve sonucu yazdır', 'ru': 'Используй std::map или std::set (или unordered-версии) и выведи результат'},
 }
+
+
+# Rules checked only with the token-based structural checker (no clang AST needed).
+TOKEN_ONLY_RULES = {'pointer_dynamic', 'smart_pointer', 'raii_scope', 'virtual_dispatch', 'template_function', 'lambda_capture', 'map_set'}
 
 
 def _walk(node):
@@ -220,6 +231,51 @@ def _fallback(source, rule):
         return has("std", "::", "sort", "(") and any("vector" in t[i:i + 3] for i in range(len(t) - 2)) and cout
     if rule == "file_exception":
         return bool({"ifstream", "ofstream", "fstream"} & set(t)) and "try" in t and "catch" in t and bool({"<<", ">>"} & set(t)) and cout
+    if rule == "pointer_dynamic":
+        pointers = {t[i + 2] for i in range(len(t) - 2) if t[i] in {"int", "double", "float", "char"} and t[i + 1] == "*" and is_id(t[i + 2])}
+        uses = sum(token in pointers for token in t)
+        return bool(pointers and "new" in t and "delete" in t and uses >= 4 and cout)
+    if rule == "smart_pointer":
+        smart = {"unique_ptr", "shared_ptr", "make_unique", "make_shared"}
+        return bool(smart & set(t) and "new" not in t and "delete" not in t and cout)
+    if rule == "raii_scope":
+        destructor = any(t[i] == "~" and is_id(t[i + 1]) and t[i + 2] == "(" for i in range(len(t) - 2))
+        return bool(destructor and ({"struct", "class"} & set(t)) and cout)
+    if rule == "virtual_dispatch":
+        return bool("virtual" in t and "override" in t and "public" in t and cout and ("->" in t or "&" in t))
+    if rule == "template_function":
+        names = set()
+        for i, token in enumerate(t):
+            if token == "template" and i + 1 < len(t) and t[i + 1] == "<":
+                depth, j = 0, i + 1
+                while j < len(t):
+                    if t[j] == "<":
+                        depth += 1
+                    elif t[j] == ">":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j += 1
+                k = j + 1
+                while k + 1 < len(t) and t[k + 1] != "(":
+                    k += 1
+                if k + 1 < len(t) and is_id(t[k]):
+                    names.add(t[k])
+        calls = sum(1 for i in range(len(t) - 1) if t[i] in names and t[i + 1] == "(")
+        return bool(names and calls >= 3 and cout)
+    if rule == "lambda_capture":
+        for i in range(1, len(t) - 2):
+            if t[i] == "[" and t[i - 1] in {"=", ",", "("} and t[i + 1] != "]":
+                j = i + 1
+                while j < len(t) and t[j] != "]":
+                    j += 1
+                if j + 1 < len(t) and t[j + 1] in {"(", "{"}:
+                    return bool(cout)
+        return False
+    if rule == "map_set":
+        containers = {"map", "unordered_map", "set", "unordered_set"}
+        declared = any(t[i] in containers and t[i + 1] == "<" for i in range(len(t) - 1))
+        return bool(declared and cout)
     if rule == "integrated_project":
         calls = {t[i] for i in range(len(t) - 1) if is_id(t[i]) and t[i + 1] == "("}
         definitions = {t[i + 1] for i in range(len(t) - 3) if t[i] in {"int", "double", "float", "bool", "string"} and is_id(t[i + 1]) and t[i + 2] == "("}
@@ -305,6 +361,6 @@ def _check_ast(main, rule):
 def check_cpp_concept(source: str, rule: str, language: str = "tr"):
     if rule not in RULES:
         return {"passed": False, "rule": rule, "method": "unavailable", "label": "", "message": "Bu görev için kavram denetimi tanımlanmamış." if language == "tr" else "Для задания не настроена проверка концепции."}
-    main = _main_ast(source)
+    main = None if rule in TOKEN_ONLY_RULES else _main_ast(source)
     passed = _check_ast(main, rule) if main else _fallback(source, rule)
     return {"passed": bool(passed), "rule": rule, "method": "clang-ast" if main else "structural-fallback", "label": RULES[rule].get(language, RULES[rule]["tr"]), "message": "" if passed else ("Kod derlenip çıktıyı üretse de bu görevde istenen C++ yapısı doğru ve anlamlı biçimde kullanılmıyor." if language == "tr" else "Код компилируется и выдаёт результат, но требуемая конструкция C++ не используется корректно и осмысленно.")}

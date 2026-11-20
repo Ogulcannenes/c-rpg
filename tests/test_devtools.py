@@ -65,6 +65,29 @@ class DeveloperLabTests(unittest.TestCase):
         self.assertIn("Blocked", state["last"])
         self.assertNotIn("/adventure/os", state["files"])
 
+    def test_conflict_accepts_a_hand_merged_line_but_not_markers(self):
+        state = devtools.initial_state("conflict")
+        state = devtools.apply("conflict", state, "start", {})
+        state = devtools.apply("conflict", state, "resolve", {"resolved": "<<<<<<< HEAD\nint canPuani = 100;\n=======\nint canPuani = 120;\n>>>>>>> b"})
+        self.assertTrue(state["conflict"])
+        state = devtools.apply("conflict", state, "resolve", {"resolved": "int canPuani = 110;"})
+        self.assertTrue(state["complete"])
+
+    def test_git_status_counts_only_real_changes_and_terminal_supports_rm(self):
+        state = devtools.initial_state("git")
+        devtools.apply("git", state, "init", {})
+        state = devtools.apply("git", state, "status", {})
+        self.assertIn("unstaged: 0", state["last"])
+        devtools.apply("git", state, "write", {"name": "a.txt", "content": "x"})
+        state = devtools.apply("git", state, "status", {})
+        self.assertIn("unstaged: 1", state["last"])
+        term = devtools.initial_state("terminal")
+        devtools.apply("terminal", term, "terminal", {"command": "touch x.txt"})
+        devtools.apply("terminal", term, "terminal", {"command": "rm x.txt"})
+        self.assertNotIn("/adventure/x.txt", term["files"])
+        term = devtools.apply("terminal", term, "terminal", {"command": "echo merhaba kedi"})
+        self.assertEqual(term["last"], "merhaba kedi")
+
 
 if __name__ == "__main__":
     unittest.main()

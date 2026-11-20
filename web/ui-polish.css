@@ -1,0 +1,115 @@
+/* ui-polish.css — "kedi odası + terminal" arayüz katmanı.
+   Son yüklenen stil dosyasıdır; eski stilleri yalnızca üstüne yazar, işlevi değiştirmez.
+   Palet: gece mürekkebi #090b13 · kedi turuncusu #ffa45c · göz turkuazı #5fe0cf
+          yumak moru #a885ff · süt kreması #f6efe4 */
+:root{
+  --ink:#090b13;--ink2:#0f1220;--fur:#ffa45c;--eye:#5fe0cf;--yarn:#a885ff;--milk:#f6efe4;
+  --glass:rgba(12,14,24,.86);--glass-line:rgba(168,133,255,.22);
+  --mono:'Cascadia Code','Cascadia Mono','JetBrains Mono',Consolas,'SF Mono','DejaVu Sans Mono',monospace;
+  --focus:0 0 0 2px #0b0d14,0 0 0 4px var(--fur);
+}
+
+/* ——— Odak ve erişilebilirlik ——— */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:none;box-shadow:var(--focus);border-radius:8px}
+::selection{background:#ffa45c55;color:#fff}
+
+/* ——— Sol menü: gruplu, kaydırılabilir ——— */
+.sidebar{background:linear-gradient(180deg,rgba(10,12,21,.96),rgba(12,13,24,.94));overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#2c3042 transparent;padding-bottom:12px}
+.sidebar .chapter-list{overflow:visible}
+.brand-icon{filter:drop-shadow(0 0 10px #a885ff66)}
+.brand small{letter-spacing:.4px;color:#8f93a8}
+.profile-card{background:linear-gradient(135deg,#1c1830,#141828);border:1px solid var(--glass-line)}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.nav-group{display:flex;flex-direction:column;gap:1px;padding:6px 0 4px}
+.nav-group+.nav-group{border-top:1px dashed #262a3c}
+.nav-group-label{font-size:11px;font-weight:600;color:#8d92a8;margin:2px 4px 4px;padding:3px 7px;letter-spacing:0;text-transform:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-radius:7px;user-select:none}
+.nav-group-label:hover{color:#fff;background:#171a29}
+.nav-group-label::after{content:'';width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
+.nav-group.collapsed .nav-group-label::after{transform:rotate(-45deg)}
+.nav-group.collapsed .nav-item:not(.active){display:none}
+.nav-item{position:relative;padding:5px 11px;border-radius:10px;color:#c2c5d4;font-size:13px;transition:background .15s,color .15s}
+.nav-item .ni-wrap{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#161a29;border:1px solid #23283b;flex:0 0 auto;transition:background .15s,border-color .15s,color .15s}
+.nav-item .ni{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:#9ea3ba;transition:color .15s}
+.nav-item:hover{background:#1a1d2d;color:#fff}
+.nav-item:hover .ni{color:var(--eye)}
+.nav-item.active{background:linear-gradient(90deg,#2a2036,#1b1c2e 70%);color:#fff;font-weight:600}
+.nav-item.active::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--fur)}
+.nav-item.active .ni-wrap{background:#3a2a22;border-color:#7a5233}
+.nav-item.active .ni{color:var(--fur)}
+.nav-item i{background:#2a2540;color:#d9c9ff;border-radius:999px;padding:1px 7px;font-size:10px}
+.side-label{cursor:pointer;user-select:none;font-size:11px;letter-spacing:0;color:#8f93a8;font-weight:600;margin:14px 11px 8px;padding-top:12px;border-top:1px dashed #262a3c}
+.chapter-link{font-size:12px;color:#b4b8c7}
+.chapter-link.selected{background:#241d33;box-shadow:inset 3px 0 0 var(--fur)}
+.side-bottom{margin-top:auto;padding-top:12px}
+.streak{background:#1d1822;border:1px solid #4a3326;border-radius:10px}
+
+/* ——— Üst çubuk ve başlıklar ——— */
+.topbar{background:linear-gradient(180deg,rgba(9,11,19,.82),rgba(9,11,19,.55));backdrop-filter:blur(10px);border-bottom:1px solid #2a2e42;border-radius:0 0 14px 14px;padding:0 10px;position:relative;z-index:5}
+.breadcrumb,.topbar .crumb{color:#c5c8d6}
+.eyebrow{text-transform:none;letter-spacing:0;font-size:12px;font-weight:600;color:var(--fur)}
+.view h1,.lesson-main h1{letter-spacing:-.4px;line-height:1.12}
+.view>.eyebrow+h1,.view h1{text-shadow:0 2px 18px rgba(5,6,12,.7)}
+.view>p,.hero p{text-shadow:0 1px 10px rgba(5,6,12,.8)}
+
+/* ——— Paneller: arka plan resminin üstünde net okunur ——— */
+.panel,.lesson-main,.quest-box,.editor-box{background:linear-gradient(160deg,rgba(18,21,34,.94),rgba(13,15,26,.95));border-color:#2c3147;box-shadow:0 14px 34px rgba(4,5,10,.42)}
+.world-zone{background:linear-gradient(150deg,#1d2336,#141828) !important;border-color:#56607c !important}
+.world-zone.open{border-color:#7fe0b8 !important}
+.world-zone.cleared{border-color:#f3cd87 !important}
+.world-zone *{text-shadow:none}
+.world-zone-topic,.world-zone-top{color:#cfd3e2}
+
+/* ——— İmza öğe: kedi kulaklı terminal penceresi ——— */
+.code-block{position:relative;background:#080a12;border:1px solid #2d3350;border-radius:12px;color:#c7f2e3;font-family:var(--mono);font-size:12.5px;line-height:1.75;padding:46px 18px 16px;box-shadow:inset 0 0 0 1px #0d1020,0 10px 30px rgba(4,5,10,.5);tab-size:4}
+.code-block::before{content:"main.cpp";position:absolute;left:0;right:0;top:0;height:32px;padding:0 16px 0 74px;display:flex;align-items:center;font:600 11.5px var(--mono);color:#8e94b0;background:linear-gradient(180deg,#171a2c,#10131f);border-bottom:1px solid #262b44;border-radius:11px 11px 0 0;
+  background-image:radial-gradient(circle at 18px 16px,#ff7486 0 4.5px,transparent 5px),radial-gradient(circle at 36px 16px,#ffbd73 0 4.5px,transparent 5px),radial-gradient(circle at 54px 16px,#70e0ae 0 4.5px,transparent 5px),linear-gradient(180deg,#171a2c,#10131f)}
+.code-block.lesson-example{overflow:visible;margin-top:34px}
+.code-block.lesson-example::after{content:"";position:absolute;top:-26px;left:40px;width:104px;height:29px;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 28'%3E%3Cpath d='M4 28 L10 2 Q11 0 13 1 L34 14 Q36 16 38 28Z' fill='%232a2f52' stroke='%234a5388' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M62 28 Q64 16 66 14 L87 1 Q89 0 90 2 L96 28Z' fill='%232a2f52' stroke='%234a5388' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M12 26 L14 9 L28 19 Q30 21 31 26Z' fill='%23ffa45c' opacity='.75'/%3E%3Cpath d='M69 26 Q70 21 72 19 L86 9 L88 26Z' fill='%23ffa45c' opacity='.75'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.code-block.lesson-example::before{content:"main.cpp  ·  =^.^="}
+.code-block .tok-kw,.code-block .kw{color:#c9a8ff}
+.code-block .tok-str,.code-block .str{color:#ffc58f}
+
+/* ——— Düğmeler ——— */
+.btn,button.primary,.primary-btn,.cta{transition:transform .12s,box-shadow .15s,background .15s}
+button.primary:hover,.primary-btn:hover{box-shadow:0 6px 20px #a885ff44}
+button:not(:disabled):active{transform:translateY(1px)}
+
+/* ——— Dar ekran ——— */
+@media(max-width:950px){
+  .nav-group-label{display:block}
+  .code-block{font-size:12px;padding:44px 12px 14px}
+  .code-block.lesson-example::after{left:36px}
+}
+@media(max-width:700px){
+  .sidebar{width:62px;flex-basis:62px;padding:12px 7px}
+  .nav-item{justify-content:center;padding:6px 0}
+  .nav-item>span:not(.ni-wrap),.nav-item i,.nav-group-label,.side-label,.local-note{display:none}
+  .nav-item.active::before{left:-7px}
+  .topbar{padding:0 4px}
+}
+
+/* ——— Hareketi azalt ——— */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
+}
+
+/* ——— Bilgi haritası kartları: arka plan resmi üstünde okunur ——— */
+.knowledge-node{background:linear-gradient(150deg,rgba(24,28,44,.97),rgba(15,17,29,.97)) !important;border-color:#394060 !important}
+.knowledge-node[class*="locked"],.knowledge-node.locked{opacity:.92;filter:none}
+.knowledge-node *{text-shadow:none}
+.knowledge-node-status{text-transform:none;letter-spacing:0;font-size:11px;color:#9fe3c8}
+.knowledge-node p,.knowledge-node small{color:#b9bdcd}
+.cat-crew .eyebrow,.cat-crew-heading .eyebrow,[class*="eyebrow"]{text-transform:none;letter-spacing:0}
+
+.side-label::before{content:'';width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);margin-right:8px;transition:transform .15s;flex:0 0 auto}
+.side-label.collapsed::before{transform:rotate(-45deg)}
+.side-label.collapsed+#chapter-list{display:none}
+.side-label>span:first-child{margin-right:auto}
+
+/* AI ayarları: Claude anahtar formu */
+.claude-key-row{border:1px solid #3a2a22;border-radius:12px;padding:10px 12px;background:#1a1520}
+.claude-key-form{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px}
+.claude-key-form input{flex:1 1 200px;min-width:0;background:#0c0e17;color:#fff;border:1px solid #3a3f58;border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px}
+.settings-status-list>.claude-key-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+.claude-key-row>small,.claude-key-row>label,.claude-key-row>.claude-key-form{grid-column:1/-1}
+.claude-key-row>label{margin-top:6px}

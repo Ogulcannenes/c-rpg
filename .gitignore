@@ -16,20 +16,13 @@ __pycache__/
 node_modules/
 
 # Build outputs
-build/
-build-*/
-build*
-dist/
-dist-*/
-dist*
-installer/
-*.spec
+/build/
+/build-*/
+/dist/
+/dist-*/
 
 # Test and audit outputs
 desktop-smoke*/
-build-audit*/
-build-qa*/
-build-cmake*/
 restore-points/
 
 # IDE

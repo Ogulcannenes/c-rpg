@@ -74,7 +74,7 @@ CppAdventureI18n.ready.then(() => {
         self.assertNotEqual(payload["before"], payload["after"])
         self.assertNotEqual(payload["mapTitleTr"], payload["mapTitleRu"])
         self.assertNotIn("pairs.", payload["mapTitleRu"])
-        self.assertEqual(payload["zones"], 15)
+        self.assertEqual(payload["zones"], 20)
         self.assertTrue(payload["audit"]["ok"], payload["audit"]["mismatches"][:10])
 
     def test_map_art_and_locale_catalog_are_served_offline_by_local_server(self):

@@ -124,16 +124,16 @@ class MissionContractTests(unittest.TestCase):
                         self.assertEqual(result["stdout"].strip(), case["expected"].strip(), f"{category} c{index:02}, case {case_index}")
 
     def test_all_code_missions_have_rules_bilingual_content_and_distinct_bosses(self):
-        self.assertEqual((len(CURRICULUM), sum(len(c["tasks"]) for c in CURRICULUM)), (15, 75))
-        self.assertEqual((len(PRACTICE), len(FIXES), len(BOSSES)), (15, 15, 15))
+        self.assertEqual((len(CURRICULUM), sum(len(c["tasks"]) for c in CURRICULUM)), (20, 160))
+        self.assertEqual((len(PRACTICE), len(FIXES), len(BOSSES)), (20, 20, 20))
         for chapter, fix, practice, boss in zip(CURRICULUM, FIXES, PRACTICE, BOSSES):
             with self.subTest(chapter=chapter["id"]):
-                for task, spec in zip(chapter["tasks"][2:5], (fix, practice, boss)):
+                for task, spec in zip([chapter["tasks"][4], chapter["tasks"][6], chapter["tasks"][7]], (fix, practice, boss)):
                     self.assertEqual(task["concept_rule"], spec["rule"])
                     self.assertTrue(task["concept_criteria"]["tr"])
                     self.assertTrue(task["concept_criteria"]["ru"])
                     self.assertGreaterEqual(len(task["tests"]), 1)
-                exercise, final_boss = chapter["tasks"][3:5]
+                exercise, final_boss = chapter["tasks"][6:8]
                 self.assertNotEqual(exercise["prompt"]["tr"], final_boss["prompt"]["tr"])
                 self.assertNotEqual(exercise["starter"], final_boss["starter"])
                 self.assertNotEqual(exercise["tests"], final_boss["tests"])

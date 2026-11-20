@@ -14,3 +14,23 @@
 @media(max-width:900px){.rpg-world .section-head{align-items:start;flex-direction:column}.world-map-legend{white-space:normal}.world-map-toolbar{align-items:flex-start;flex-direction:column}}
 @media(max-width:580px){.world-map-viewport{height:500px}.world-zone{width:205px}.world-map-art,.world-map-canvas{image-rendering:auto}}
 @media(prefers-reduced-motion:reduce){.rpg-cat img{animation:none}.rpg-meter i{transition:none}}
+
+/* Harita düzeni: serpantin rota, okunur kartlar, sakin arka plan */
+.world-map-art{opacity:.5;filter:saturate(.75) brightness(.85)}
+.world-route{position:absolute;inset:0;width:1500px;height:900px;pointer-events:none;z-index:0;overflow:visible}
+.world-route path{fill:none;stroke-linecap:round}
+.world-route .route-done{stroke:#f3cd87;stroke-width:9;filter:drop-shadow(0 0 6px #f3cd8766)}
+.world-route .route-open{stroke:#7fe0b8;stroke-width:7;stroke-dasharray:2 16;animation:route-march 1.2s linear infinite}
+.world-route .route-locked{stroke:#5b6380;stroke-width:5;stroke-dasharray:2 14;opacity:.6}
+@keyframes route-march{to{stroke-dashoffset:-18}}
+.world-zone{width:236px!important;z-index:1}
+.world-zone-select{padding:12px 14px;gap:6px}
+.world-zone-select strong{font-size:16px}
+.world-zone-number{font-size:12px}
+.world-zone-state{font-size:10.5px;text-transform:none;letter-spacing:0}
+.world-zone-topic{font-size:12px}
+.world-zone-progress{font-size:11px}
+.world-active-quest{font-size:11px;max-width:210px}
+.world-boss{font-size:11.5px;padding:8px 12px}
+.world-zone.locked .world-zone-select strong{color:#d7dae6}
+@media(prefers-reduced-motion:reduce){.world-route .route-open{animation:none}}

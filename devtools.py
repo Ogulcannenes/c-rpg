@@ -16,7 +16,7 @@ SAFE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,48}$")
 def initial_state(module: str) -> dict:
     if module == "git":
         files = {"README.md": "# C++ Adventure\n"}
-        return {"initialized": False, "branch": "main", "branches": {"main": None}, "branch_files": {"main": files}, "branch_bases": {"main": files}, "remote": {}, "files": files, "staged": [], "commits": [], "message": "", "last": ""}
+        return {"initialized": False, "branch": "main", "branches": {"main": None}, "branch_files": {"main": dict(files)}, "branch_bases": {"main": dict(files)}, "remote": {}, "files": dict(files), "staged": [], "commits": [], "message": "", "last": ""}
     if module == "conflict":
         return {"started": False, "conflict": False, "left": "", "right": "", "resolved": "", "complete": False, "last": ""}
     if module == "cmake":
@@ -96,17 +96,21 @@ def apply(module: str, state: dict, action: str, data: dict, compiler: str | Non
             state["files"] = dict(remote["files"]); state["branch_files"][branch] = dict(remote["files"]); state["branches"][branch] = remote["head"]
             return _message(state, f"Pulled simulated {branch} remote state. No network connection was used.")
         if action == "status":
-            changed = sorted(set(state["files"]) - set(state["staged"]))
+            committed = state["branch_files"].get(state["branch"], {})
+            changed = sorted(name for name in set(state["files"]) | set(committed) if state["files"].get(name) != committed.get(name) and name not in state["staged"])
             return _message(state, f"On branch {state['branch']} · staged: {len(state['staged'])} · unstaged: {len(changed)}")
         return _message(state, "Unknown Git lab action.")
 
     if module == "conflict":
         if action == "start":
-            state.update(started=True, conflict=True, left="The hero has 100 HP.", right="The hero has 120 HP.", resolved="", complete=False)
+            state.update(started=True, conflict=True, left="int canPuani = 100;", right="int canPuani = 120;", resolved="", complete=False)
             return _message(state, "Both branches changed the same line. Choose the final value to resolve the conflict.")
         if action == "resolve" and state.get("conflict"):
             result = str(data.get("resolved", "")).strip()
-            if result not in (state["left"], state["right"]): return _message(state, "Use one of the branch versions shown above.")
+            markers = any(mark in result for mark in ("<<<<<<<", "=======", ">>>>>>>"))
+            if markers: return _message(state, "Remove every conflict marker before finishing the merge.")
+            if result not in (state["left"], state["right"]) and not re.fullmatch(r"int canPuani = \d{1,4};", result):
+                return _message(state, "Use one of the branch versions shown above.")
             state.update(resolved=result, conflict=False, complete=True)
             return _message(state, "Conflict resolved and merge verified.")
         return _message(state, "Start the conflict scenario first.")
@@ -130,7 +134,7 @@ def apply(module: str, state: dict, action: str, data: dict, compiler: str | Non
         parts = command.split()
         if not parts: return _message(state, "Enter a command, or type help.")
         op = parts[0].lower()
-        if op == "help": output = "Allowed: help, pwd, ls, mkdir NAME, touch NAME, cat NAME, cd PATH, echo TEXT > NAME, clear, git status, cmake --version, g++ --version"
+        if op == "help": output = "Allowed: help, pwd, ls, mkdir NAME, touch NAME, cat NAME, rm NAME, cd PATH, echo TEXT, echo TEXT > NAME, clear, git status, cmake --version, g++ --version"
         elif op == "pwd": output = state["cwd"]
         elif op == "ls":
             prefix = state["cwd"].rstrip("/") + "/"
@@ -143,6 +147,12 @@ def apply(module: str, state: dict, action: str, data: dict, compiler: str | Non
             path = state["cwd"].rstrip("/") + "/" + parts[1]; state["files"].setdefault(path, ""); output = f"Created {parts[1]}"
         elif op == "cat" and len(parts) == 2:
             path = state["cwd"].rstrip("/") + "/" + parts[1]; output = state["files"].get(path, "File not found.")
+        elif op == "rm" and len(parts) == 2 and SAFE_NAME.fullmatch(parts[1]):
+            path = state["cwd"].rstrip("/") + "/" + parts[1]
+            if path in state["files"]: del state["files"][path]; output = f"Removed {parts[1]}"
+            else: output = "File not found."
+        elif op == "cd" and len(parts) == 1:
+            state["cwd"] = "/adventure"; output = "/adventure"
         elif op == "cd" and len(parts) == 2:
             target = parts[1]
             path = "/adventure" if target == ".." and state["cwd"] == "/adventure" else (state["cwd"].rsplit("/", 1)[0] or "/adventure" if target == ".." else target if target.startswith("/") else state["cwd"].rstrip("/") + "/" + target)
@@ -153,6 +163,8 @@ def apply(module: str, state: dict, action: str, data: dict, compiler: str | Non
             if i + 1 >= len(parts) or not SAFE_NAME.fullmatch(parts[i + 1]): output = "Use: echo TEXT > safe-file-name"
             else:
                 path = state["cwd"].rstrip("/") + "/" + parts[i + 1]; text = " ".join(parts[1:i])[:MAX_TEXT]; state["files"][path] = text; output = f"Wrote {len(text)} characters."
+        elif op == "echo" and ">" not in parts:
+            output = " ".join(parts[1:])[:MAX_TEXT]
         elif command == "git status": output = "On branch main\nNothing to commit (simulated workspace)."
         elif command == "cmake --version": output = "CMake lesson simulator · no host command was executed."
         elif command == "g++ --version": output = "Compiler is available." if compiler else "G++ was not detected."

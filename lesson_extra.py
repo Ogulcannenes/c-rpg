@@ -1,0 +1,546 @@
+"""Deeper lesson notes and extra missions for every chapter.
+
+Each chapter gets three more lesson sections (a worked example, common mistakes and
+a self-check) and three more missions (a second quiz, a second output prediction and
+a warm-up coding task) so a learner meets every idea several times before the boss.
+Code samples are shared by both languages; comments inside them only show results.
+"""
+
+# (tr title, tr text, ru title, ru text, code)
+S = tuple
+
+CHAPTERS = [
+    # 1 İlk Programın
+    {
+        "sections": [
+            S(("Adım adım: ilk programı okumak",
+               "#include <iostream> giriş/çıkış kütüphanesini ekler. int main() programın başladığı yerdir; süslü parantezler gövdenin sınırını çizer. std::cout << ile gönderdiğin her parça sırayla ekrana yazılır. \"\\n\" veya std::endl bir sonraki satıra geçer; return 0; işletim sistemine her şeyin yolunda gittiğini söyler.",
+               "Шаг за шагом: читаем первую программу",
+               "#include <iostream> подключает библиотеку ввода-вывода. int main() — место, где начинается программа; фигурные скобки ограничивают её тело. Всё, что отправлено в std::cout через <<, печатается по порядку. \"\\n\" или std::endl переводят строку, а return 0; сообщает системе, что всё прошло успешно.",
+               '#include <iostream>\nint main() {\n    std::cout << "Merhaba" << "\\n";\n    std::cout << "C++" << std::endl;\n    return 0;\n}\n// Merhaba\n// C++')),
+            S(("Sık yapılan hatalar",
+               "En sık görülen hata satır sonundaki noktalı virgülü unutmaktır; derleyici genellikle bir sonraki satırda \"expected ';'\" der. Metni tırnak içine almamak, std:: önekini unutmak ya da büyük-küçük harfi karıştırmak (Main ile main farklıdır) da derlemeyi bozar. Hata mesajındaki satır numarasına bak ve o satırla bir öncekini kontrol et.",
+               "Частые ошибки",
+               "Самая частая ошибка — забыть точку с запятой в конце строки; компилятор обычно пишет \"expected ';'\" на следующей строке. Текст без кавычек, пропущенный std:: или путаница регистра (Main и main — разные имена) тоже ломают сборку. Смотри номер строки в сообщении и проверяй её и предыдущую.",
+               'std::cout << "Merhaba"    // ✗ ;\nstd::cout << Merhaba;     // ✗ ""\nstd::cout << "Merhaba";   // ✓')),
+            S(("Kendini kontrol et",
+               "Şunları yapabiliyorsan bu bölüm tamam: programın main'den başladığını anlatmak, cout ile metin ve sayı yazdırmak, satırı \"\\n\" ile bitirmek ve derleyicinin gösterdiği satırdaki hatayı bulup düzeltmek.",
+               "Проверь себя",
+               "Глава пройдена, если ты можешь: объяснить, что программа начинается с main, вывести текст и число через cout, завершить строку \"\\n\" и найти ошибку в строке, которую показал компилятор.",
+               "")),
+        ],
+        "quiz": ('Satır sonu eklemek için cout\'a ne gönderilir? std::cout << "A" << std::???; (endl / tab / end)',
+                 'Что отправляют в cout для перевода строки? std::cout << "A" << std::???; (endl / tab / end)', "endl"),
+        "predict": ("", 'std::cout << "Mi" << "yav" << 3;', "Miyav3"),
+        "warmup": ("İki satır yazdır: önce `Merhaba`, sonra `Kedi`.", "Выведи две строки: сначала `Merhaba`, затем `Kedi`.",
+                   '#include <iostream>\nint main() {\n    // iki satır yazdır\n    return 0;\n}', [("", "Merhaba\nKedi")], ["std::cout"]),
+    },
+    # 2 Değişkenler ve Türler
+    {
+        "sections": [
+            S(("Tanımla, ata, kullan",
+               "Bir değişken önce türü ve adıyla tanımlanır, sonra değer alır. = işareti matematikteki \"eşittir\" değil, \"ata\" demektir: sağdaki değer soldaki kutuya konur. Değer program boyunca değişebilir; değişmemesini istediğin bir değeri const ile işaretlersin.",
+               "Объяви, присвой, используй",
+               "Переменная сначала объявляется с типом и именем, затем получает значение. Знак = означает не «равно», а «присвоить»: значение справа кладётся в ячейку слева. Значение может меняться во время работы; неизменное значение помечают const.",
+               'int can = 9;\ndouble hiz = 2.5;\nchar harf = \'A\';\nbool tok = true;\nstd::string ad = "Luna";\ncan = can - 1;          // can → 8\nconst int MAX = 100;    // MAX = 5; ✗')),
+            S(("Sık yapılan hatalar",
+               "int'e kesirli sayı atarsan küsurat sessizce kaybolur (int x = 2.9; x'i 2 yapar). Başlangıç değeri verilmemiş bir değişkeni okumak rastgele bir sayı döndürür; her değişkeni tanımlarken başlat. Tek karakter için tek tırnak ('A'), metin için çift tırnak (\"Luna\") kullanılır.",
+               "Частые ошибки",
+               "Если присвоить int дробное число, дробная часть молча пропадёт (int x = 2.9; даёт 2). Чтение неинициализированной переменной даёт случайное число — всегда задавай начальное значение. Для одного символа нужны одинарные кавычки ('A'), для текста — двойные (\"Luna\").",
+               "int x = 2.9;        // x → 2\nint y;\nstd::cout << y;     // ✗ ?\nchar c = \"A\";       // ✗ 'A'")),
+            S(("Kendini kontrol et",
+               "Bir değer için doğru türü seçebiliyor, değişkeni başlatıp güncelleyebiliyor ve int ile double arasındaki farkı örnekle açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если умеешь выбрать тип для значения, инициализировать и изменить переменную и на примере объяснить разницу между int и double.",
+               "")),
+        ],
+        "quiz": ("true veya false değer tutan tür hangisidir? (bool / char / double)", "Какой тип хранит true или false? (bool / char / double)", "bool"),
+        "predict": ("", "double d = 7 / 2;\nstd::cout << d;", "3"),
+        "warmup": ("Bir `int` yaş (3) ve bir `double` kilo (4.5) tanımla, `3 4.5` yazdır.", "Объяви `int` возраст (3) и `double` вес (4.5), выведи `3 4.5`.",
+                   '#include <iostream>\nint main() {\n    // yas ve kilo değişkenleri\n    return 0;\n}', [("", "3 4.5")], ["int", "double"]),
+    },
+    # 3 Girdi ve Çıktı
+    {
+        "sections": [
+            S(("Okuma sırası",
+               "std::cin >> a >> b; boşluk veya Enter ile ayrılmış iki değeri sırayla okur. Program girdi gelene kadar bekler, sonra devam eder. Değişkenin türü neyin okunacağını belirler: int için bir sayı, string için tek bir kelime okunur.",
+               "Порядок чтения",
+               "std::cin >> a >> b; по очереди читает два значения, разделённых пробелом или Enter. Программа ждёт ввода, затем продолжает. Тип переменной определяет, что будет прочитано: для int — число, для string — одно слово.",
+               'int a, b;\nstd::cin >> a >> b;            // 3 4\nstd::cout << a + b << "\\n";    // 7\nstd::string ad;\nstd::cin >> ad;                // Luna\nstd::cout << "Selam " << ad;   // Selam Luna')),
+            S(("Sık yapılan hatalar",
+               "Okları ters yazmak derlenmez: cin ile >> (veri değişkene akar), cout ile << (veri ekrana akar) kullanılır. Bir değişkeni okumadan önce kullanmak yanlış sonuç verir. Testler çıktıyı harfi harfine karşılaştırır: fazladan boşluk, eksik satır veya ek açıklama metni (\"Sonuc:\") testi başarısız yapar.",
+               "Частые ошибки",
+               "Стрелки в обратную сторону не скомпилируются: с cin используется >> (данные текут в переменную), с cout — << (данные текут на экран). Использование переменной до чтения даёт неверный результат. Тесты сравнивают вывод посимвольно: лишний пробел, пропущенная строка или поясняющий текст (\"Sonuc:\") провалят тест.",
+               "std::cin << n;    // ✗ >>\nstd::cout >> n;   // ✗ <<\nstd::cin >> n;    // ✓")),
+            S(("Kendini kontrol et",
+               "Birden çok değeri tek satırda okuyabiliyor, okuduğun değerle hesap yapıp sonucu tam olarak istenen biçimde yazdırabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если можешь прочитать несколько значений в одной строке, посчитать с ними и вывести результат ровно в нужном формате.",
+               "")),
+        ],
+        "quiz": ("cout ile kullanılan operatör hangisidir? (<< / >> / ==)", "Какой оператор используется с cout? (<< / >> / ==)", "<<"),
+        "predict": ("", "int x = 3;\nstd::cout << x << x + 1;", "34"),
+        "warmup": ("İki tam sayı oku ve toplamlarını yazdır.", "Прочитай два целых числа и выведи их сумму.",
+                   '#include <iostream>\nint main() {\n    int a, b;\n    // oku ve topla\n    return 0;\n}', [("3 4", "7"), ("-2 10", "8"), ("0 0", "0")], ["std::cin", "std::cout"]),
+    },
+    # 4 Operatörler
+    {
+        "sections": [
+            S(("Bölme ve kalan",
+               "İki int arasındaki / tam bölmedir (7 / 2 = 3); % ise kalanı verir (7 % 2 = 1). Kalan, tek-çift kontrolünde ve zaman/basamak ayırmada çok kullanılır. x += 5, x = x + 5'in kısaltmasıdır; ++x değeri bir artırır. && ve || ile karşılaştırmaları birleştirirsin.",
+               "Деление и остаток",
+               "Между двумя int оператор / выполняет целочисленное деление (7 / 2 = 3), а % даёт остаток (7 % 2 = 1). Остаток нужен для проверки чётности и разбиения времени или цифр. x += 5 — сокращение для x = x + 5, ++x увеличивает значение на 1. && и || объединяют сравнения.",
+               'int toplam = 17;\nstd::cout << toplam / 5;   // 3\nstd::cout << toplam % 5;   // 2\ntoplam += 3;               // 20\nstd::cout << (toplam > 10 && toplam < 30);  // 1')),
+            S(("Sık yapılan hatalar",
+               "= (atama) ile == (karşılaştırma) karıştırılır; if (x = 5) her zaman doğru çalışır. İki int bölündüğünde küsurat beklemek (1 / 2 = 0) ve işlem önceliğini unutmak (2 + 3 * 4 = 14) da çok sık yapılır. Emin değilsen parantez kullan ya da sayılardan birini double yap (1.0 / 2).",
+               "Частые ошибки",
+               "Путают = (присваивание) и == (сравнение): if (x = 5) всегда истинно. Ждать дробную часть при делении int (1 / 2 = 0) и забывать приоритет операций (2 + 3 * 4 = 14) — тоже частые ошибки. Если не уверен, ставь скобки или делай одно из чисел double (1.0 / 2).",
+               "if (x = 5)   // ✗ ==\nstd::cout << 1 / 2;     // 0\nstd::cout << 1.0 / 2;   // 0.5\nstd::cout << 2 + 3 * 4; // 14")),
+            S(("Kendini kontrol et",
+               "Tam bölme ile kalanı, atama ile karşılaştırmayı ve && / || mantığını birer örnekle açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если на примерах объяснишь целочисленное деление и остаток, присваивание и сравнение, а также логику && / ||.",
+               "")),
+        ],
+        "quiz": ("17 % 5 ifadesinin sonucu nedir? (2 / 3 / 3.4)", "Чему равно 17 % 5? (2 / 3 / 3.4)", "2"),
+        "predict": ("", "int x = 10;\nx += 5;\nx %= 4;\nstd::cout << x;", "3"),
+        "warmup": ("Toplam saniyeyi oku ve `dakika saniye` biçiminde yazdır (/ ve % kullan).", "Прочитай общее число секунд и выведи `минуты секунды` (используй / и %).",
+                   '#include <iostream>\nint main() {\n    int s;\n    std::cin >> s;\n    // dakika ve saniye\n    return 0;\n}', [("125", "2 5"), ("60", "1 0"), ("59", "0 59")], ["/", "%"]),
+    },
+    # 5 Koşullar
+    {
+        "sections": [
+            S(("else if zinciri",
+               "Koşullar yukarıdan aşağı denenir; ilk doğru olan çalışır, geri kalanı atlanır. Bu yüzden en dar koşulu en üste yazarsın. && ikisinin de doğru olmasını, || en az birinin doğru olmasını ister; ! bir koşulu tersine çevirir.",
+               "Цепочка else if",
+               "Условия проверяются сверху вниз: выполняется первое истинное, остальные пропускаются. Поэтому самое узкое условие пишут первым. && требует, чтобы оба условия были истинны, || — хотя бы одно; ! инвертирует условие.",
+               'int puan = 85;\nif (puan >= 90)      std::cout << "A";\nelse if (puan >= 70) std::cout << "B";   // ✓\nelse if (puan >= 50) std::cout << "C";\nelse                 std::cout << "F";')),
+            S(("Sık yapılan hatalar",
+               "if (x > 5); satırındaki noktalı virgül koşulun gövdesini boşaltır, alttaki satır her zaman çalışır. Süslü parantez koymadan iki satır yazarsan yalnızca ilki koşula bağlıdır. Sıra yanlışsa (önce >= 50, sonra >= 90) üstteki geniş koşul aşağıdakilerin hiç çalışmasına izin vermez. Sınır değerini (tam 50) mutlaka dene.",
+               "Частые ошибки",
+               "Точка с запятой в if (x > 5); делает тело условия пустым, и следующая строка выполняется всегда. Без фигурных скобок к условию относится только первая строка. При неправильном порядке (сначала >= 50, потом >= 90) широкое условие не даст сработать остальным. Обязательно проверяй граничное значение (ровно 50).",
+               'if (puan >= 50);          // ✗ ;\n    std::cout << "Gecti";  // her zaman / всегда\nif (puan >= 50) {\n    std::cout << "Gecti";  // ✓\n}')),
+            S(("Kendini kontrol et",
+               "Sınır değerlerini doğru ele alabiliyor, else if sırasını kurabiliyor ve && / || ile birleşik koşul yazabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если правильно обрабатываешь граничные значения, выстраиваешь порядок else if и пишешь составные условия с && / ||.",
+               "")),
+        ],
+        "quiz": ("else bloğu ne zaman çalışır? (hiçbir koşul doğru değilse / her zaman / ilk koşul doğruysa)",
+                 "Когда выполняется блок else? (если ни одно условие не истинно / всегда / если первое условие истинно)",
+                 {"tr": "hiçbir koşul doğru değilse", "ru": "если ни одно условие не истинно"}),
+        "predict": ("", 'int x = 7;\nif (x > 5 && x % 2 == 0) std::cout << "A";\nelse if (x > 5) std::cout << "B";\nelse std::cout << "C";', "B"),
+        "warmup": ("Bir sıcaklık oku: 30'dan büyükse `Sicak`, 10'dan küçükse `Soguk`, değilse `Ilik` yazdır.", "Прочитай температуру: больше 30 — `Sicak`, меньше 10 — `Soguk`, иначе — `Ilik`.",
+                   '#include <iostream>\nint main() {\n    int t;\n    std::cin >> t;\n    // if / else if / else\n    return 0;\n}', [("35", "Sicak"), ("5", "Soguk"), ("20", "Ilik"), ("30", "Ilik"), ("10", "Ilik")], ["if", "else"]),
+    },
+    # 6 Döngüler
+    {
+        "sections": [
+            S(("Döngünün turlarını izle",
+               "for (int i = 1; i <= 3; ++i) şu sırayla işler: i = 1 olur, koşul kontrol edilir, gövde çalışır, ++i yapılır ve koşul yeniden kontrol edilir. Koşul yanlış olunca döngü biter. while koşulu her turdan önce kontrol eder; tekrar sayısı önceden belli değilse while daha doğaldır.",
+               "Следи за итерациями",
+               "for (int i = 1; i <= 3; ++i) работает так: i = 1, проверяется условие, выполняется тело, выполняется ++i, условие проверяется снова. Когда условие ложно, цикл заканчивается. while проверяет условие перед каждой итерацией; если число повторов заранее неизвестно, while естественнее.",
+               "int toplam = 0;\nfor (int i = 1; i <= 4; ++i) {\n    toplam += i;      // 1 → 3 → 6 → 10\n}\nstd::cout << toplam;  // 10\nint n = 3;\nwhile (n > 0) { std::cout << n; --n; }  // 321")),
+            S(("Sık yapılan hatalar",
+               "< ile <= karışırsa son tur atlanır ya da bir tur fazla yapılır (off-by-one). while içinde sayacı güncellemeyi unutmak sonsuz döngüye yol açar. Toplam değişkenini döngünün içinde tanımlarsan her turda sıfırlanır; biriktirdiğin değişkeni döngüden önce tanımla.",
+               "Частые ошибки",
+               "Если перепутать < и <=, последняя итерация пропадёт или появится лишняя (ошибка на единицу). Забытое обновление счётчика в while даёт бесконечный цикл. Если объявить сумму внутри цикла, она обнуляется на каждой итерации — объявляй накопитель до цикла.",
+               "int i = 0;\nwhile (i < 5) {\n    std::cout << i;   // ✗ i++ yok / нет i++\n}\nfor (int k = 1; k < 5; ++k)   // 1..4, 5 yok / без 5")),
+            S(("Kendini kontrol et",
+               "Bir döngünün kaç tur döneceğini önceden hesaplayabiliyor, toplam veya sayaç biriktirebiliyor ve for ile while arasında bilinçli seçim yapabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если заранее считаешь число итераций, накапливаешь сумму или счётчик и осознанно выбираешь между for и while.",
+               "")),
+        ],
+        "quiz": ("for (int i = 0; i < 4; ++i) kaç kez döner? (4 / 5 / 3)", "Сколько раз выполнится for (int i = 0; i < 4; ++i)? (4 / 5 / 3)", "4"),
+        "predict": ("", "int s = 0;\nfor (int i = 10; i > 0; i -= 3) s += i;\nstd::cout << s;", "22"),
+        "warmup": ("n oku ve n'den 1'e kadar geri sayarak sayıları aralarında boşlukla yazdır.", "Прочитай n и выведи обратный отсчёт от n до 1 через пробел.",
+                   '#include <iostream>\nint main() {\n    int n;\n    std::cin >> n;\n    // geri sayım\n    return 0;\n}', [("3", "3 2 1"), ("1", "1"), ("5", "5 4 3 2 1")], []),
+    },
+    # 7 Fonksiyonlar
+    {
+        "sections": [
+            S(("Bir fonksiyon çağrısının yolculuğu",
+               "main, kare(4) çağrısına gelince durur; 4 değeri x parametresine kopyalanır ve kare çalışır. return x * x; sonucu çağrının yerine koyar ve main kaldığı yerden devam eder. void fonksiyonlar değer döndürmez, yalnızca bir iş yapar.",
+               "Путь вызова функции",
+               "main доходит до вызова kare(4) и останавливается; 4 копируется в параметр x, и выполняется kare. return x * x; подставляет результат на место вызова, и main продолжает работу. Функции void ничего не возвращают, они просто выполняют действие.",
+               'int kare(int x) {\n    return x * x;\n}\nvoid selamla(std::string ad) {\n    std::cout << "Miyav " << ad << "\\n";\n}\nint main() {\n    int s = kare(4);    // 16\n    selamla("Luna");    // Miyav Luna\n}')),
+            S(("Sık yapılan hatalar",
+               "Fonksiyonu main'den sonra tanımlayıp önceden bildirmeden çağırmak derleme hatası verir. Sonucu fonksiyon içinde yazdırıp return etmemek de sık görülür: return değeri çağırana verir, cout yalnızca ekrana yazar. Parametreler kopyadır; fonksiyon içinde x'i değiştirmek çağırandaki değişkeni değiştirmez.",
+               "Частые ошибки",
+               "Вызов функции, объявленной после main без предварительного объявления, не скомпилируется. Часто результат печатают внутри функции и забывают return: return отдаёт значение вызывающему, а cout лишь печатает. Параметры — копии: изменение x внутри функции не меняет переменную снаружи.",
+               "void artir(int x) { x++; }\nint a = 5;\nartir(a);\nstd::cout << a;   // 5")),
+            S(("Kendini kontrol et",
+               "Parametre ile argümanı ayırabiliyor, değer döndüren ve void fonksiyon yazabiliyor ve kopyalanan parametrenin asıl değeri neden değiştirmediğini açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если различаешь параметр и аргумент, пишешь функции с возвратом и void и можешь объяснить, почему копия параметра не меняет исходное значение.",
+               "")),
+        ],
+        "quiz": ("Değer döndürmeyen fonksiyonun dönüş türü nedir? (void / int / return)", "Какой тип возврата у функции, которая ничего не возвращает? (void / int / return)", "void"),
+        "predict": ("int f(int x) { return x * 3 - 1; }", "std::cout << f(f(2));", "14"),
+        "warmup": ("`int enBuyuk(int a, int b)` fonksiyonu yaz; iki sayı oku, büyüğünü fonksiyonla bulup yazdır.", "Напиши функцию `int enBuyuk(int a, int b)`; прочитай два числа и выведи большее с её помощью.",
+                   '#include <iostream>\n// enBuyuk fonksiyonu\nint main() {\n    int a, b;\n    std::cin >> a >> b;\n    return 0;\n}', [("3 9", "9"), ("-1 -7", "-1"), ("5 5", "5")], ["enBuyuk", "return"]),
+    },
+    # 8 Diziler ve vector
+    {
+        "sections": [
+            S(("vector ile çalışmak",
+               "std::vector<int> v; boş bir liste kurar. v.push_back(x) sona ekler, v.size() eleman sayısını verir, v[i] i'inci elemana erişir. Range-for (for (int x : v)) tüm elemanları sırayla gezer; indekse ihtiyacın varsa klasik for kullanırsın.",
+               "Работа с vector",
+               "std::vector<int> v; создаёт пустой список. v.push_back(x) добавляет в конец, v.size() возвращает число элементов, v[i] даёт доступ к i-му элементу. range-for (for (int x : v)) обходит все элементы по порядку; если нужен индекс, используй обычный for.",
+               'std::vector<int> v;\nv.push_back(4);\nv.push_back(7);\nv.push_back(1);              // {4, 7, 1}\nstd::cout << v.size();       // 3\nfor (int x : v) std::cout << x << " ";   // 4 7 1\nstd::cout << v[v.size() - 1];            // 1')),
+            S(("Sık yapılan hatalar",
+               "v[v.size()] geçerli değildir; son indeks size() - 1'dir. Sınır dışı erişim programı çökertebilir veya rastgele bir değer döndürebilir; emin değilsen v.at(i) kullan, hatalı indekste istisna fırlatır. Boş bir vector'ün ilk elemanını okumak da aynı hatadır.",
+               "Частые ошибки",
+               "v[v.size()] недопустимо: последний индекс — size() - 1. Выход за границы может обрушить программу или вернуть мусор; если не уверен, используй v.at(i) — при неверном индексе он бросает исключение. Чтение первого элемента пустого vector — та же ошибка.",
+               "std::vector<int> v{1, 2, 3};\nstd::cout << v[3];      // ✗\nstd::cout << v.at(3);   // std::out_of_range\nstd::cout << v[2];      // ✓ 3")),
+            S(("Kendini kontrol et",
+               "push_back ile listeyi büyütebiliyor, döngüyle toplam veya en küçük/en büyük bulabiliyor ve indeksin neden 0'dan başladığını açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если умеешь пополнять список через push_back, находить циклом сумму, минимум или максимум и объяснить, почему индексы начинаются с 0.",
+               "")),
+        ],
+        "quiz": ("Bir vector'ün sonuna eleman ekleyen metot hangisidir? (push_back / insert_end / add)", "Какой метод добавляет элемент в конец vector? (push_back / insert_end / add)", "push_back"),
+        "predict": ("", "std::vector<int> v{2, 4, 6};\nv.push_back(8);\nstd::cout << v.size() + v[1];", "8"),
+        "warmup": ("n ve ardından n tam sayı oku; vector'e koy ve en küçük değeri yazdır.", "Прочитай n и затем n целых чисел; сохрани в vector и выведи минимальное.",
+                   '#include <iostream>\n#include <vector>\nint main() {\n    int n;\n    std::cin >> n;\n    // vector ve en küçük\n    return 0;\n}', [("3\n4 1 7", "1"), ("1\n-5", "-5"), ("4\n9 9 2 3", "2")], ["vector"]),
+    },
+    # 9 Metinler
+    {
+        "sections": [
+            S(("string ile işlemler",
+               "s.size() karakter sayısını, s[0] ilk karakteri verir. s + t iki metni birleştirir, s.substr(1, 3) 1. indeksten başlayıp 3 karakter alır. s.find(\"at\") aranan parçanın konumunu döndürür; bulamazsa std::string::npos döner.",
+               "Операции со string",
+               "s.size() возвращает число символов, s[0] — первый символ. s + t соединяет строки, s.substr(1, 3) берёт 3 символа, начиная с индекса 1. s.find(\"at\") возвращает позицию подстроки, а если её нет — std::string::npos.",
+               'std::string s = "Kedicik";\nstd::cout << s.size();        // 7\nstd::cout << s[0];            // K\nstd::cout << s.substr(0, 4);  // Kedi\nstd::cout << s + "ler";       // Kediciler\nif (s.find("cik") != std::string::npos) std::cout << "var";')),
+            S(("Sık yapılan hatalar",
+               "\"Merhaba\" + \"Dunya\" iki metin değişmezini toplamaya çalışır ve derlenmez; en az biri std::string olmalıdır. cin >> boşlukta durduğu için \"Mavi Kedi\" girdisinden yalnızca \"Mavi\" okunur; satırın tamamı için std::getline kullan. cin >> ile getline'ı art arda kullanırken arada kalan satır sonunu cin.ignore() ile atla.",
+               "Частые ошибки",
+               "\"Merhaba\" + \"Dunya\" пытается сложить два строковых литерала и не компилируется — хотя бы один операнд должен быть std::string. cin >> останавливается на пробеле, поэтому из \"Mavi Kedi\" прочитается только \"Mavi\"; для всей строки используй std::getline. При смешивании cin >> и getline пропусти оставшийся перевод строки через cin.ignore().",
+               'std::string ad;\nstd::cin >> ad;               // "Mavi Kedi" → "Mavi"\nstd::getline(std::cin, ad);   // tüm satır / вся строка')),
+            S(("Kendini kontrol et",
+               "Metin birleştirebiliyor, uzunluk ve karakter erişimi yapabiliyor ve getline ile tam bir satır okuyabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если умеешь соединять строки, узнавать длину, обращаться к символам и читать целую строку через getline.",
+               "")),
+        ],
+        "quiz": ("Boşluk içeren bir satırın tamamını okuyan fonksiyon hangisidir? (getline / cin / read)", "Какая функция читает всю строку с пробелами? (getline / cin / read)", "getline"),
+        "predict": ("", 'std::string s = "Pati";\ns += "ler";\nstd::cout << s.size() << s[4];', "7l"),
+        "warmup": ("Bir kelime oku; ilk ve son karakterini yan yana yazdır.", "Прочитай слово и выведи подряд его первый и последний символ.",
+                   '#include <iostream>\n#include <string>\nint main() {\n    std::string k;\n    std::cin >> k;\n    return 0;\n}', [("Luna", "La"), ("C", "CC"), ("Kedi", "Ki")], ["std::string"]),
+    },
+    # 10 Bellek ve Referanslar
+    {
+        "sections": [
+            S(("Adres, referans ve pointer",
+               "Her değişkenin bellekte bir adresi vardır; &x bu adresi verir. int& r = x; x'e ikinci bir ad koyar ve adres aynıdır. int* p = &x; adresi ayrı bir değişkende saklar; *p o adresteki değeri okur veya değiştirir. Fonksiyona referans parametre verirsen fonksiyon asıl değişkeni değiştirebilir.",
+               "Адрес, ссылка и указатель",
+               "У каждой переменной есть адрес в памяти; &x возвращает его. int& r = x; даёт x второе имя с тем же адресом. int* p = &x; хранит адрес в отдельной переменной; *p читает или меняет значение по этому адресу. Если передать параметр по ссылке, функция сможет изменить исходную переменную.",
+               "int x = 5;\nint& r = x;      // r ≡ x\nint* p = &x;     // p → x\nr = 8;           // x → 8\n*p = *p + 1;     // x → 9\nvoid artir(int& n) { ++n; }")),
+            S(("Sık yapılan hatalar",
+               "Referans tanımlanırken hemen bir değişkene bağlanmalıdır (int& r; derlenmez). nullptr veya başlatılmamış bir pointer'ı * ile okumak programı çökertir. & işaretinin iki anlamını karıştırma: türün yanında (int&) referans, bir ifadenin önünde (&x) adres demektir.",
+               "Частые ошибки",
+               "Ссылку нужно сразу привязать к переменной (int& r; не скомпилируется). Разыменование nullptr или неинициализированного указателя обрушит программу. Не путай два смысла &: рядом с типом (int&) это ссылка, перед выражением (&x) — адрес.",
+               "int& r;            // ✗\nint* p = nullptr;\nstd::cout << *p;   // ✗ çöküş / падение")),
+            S(("Kendini kontrol et",
+               "Referans ile kopya arasındaki farkı, & ve * operatörlerinin anlamını ve referans parametrenin asıl değeri neden değiştirdiğini açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если объяснишь разницу между ссылкой и копией, смысл операторов & и * и почему параметр-ссылка меняет исходное значение.",
+               "")),
+        ],
+        "quiz": ("int* p = &x; ifadesinde *p neyi verir? (x'in değeri / x'in adresi / p'nin adresi)", "Что даёт *p в int* p = &x;? (значение x / адрес x / адрес p)",
+                 {"tr": "x'in değeri", "ru": "значение x"}),
+        "predict": ("", "int a = 3;\nint& r = a;\nint* p = &a;\nr += 2;\n*p *= 10;\nstd::cout << a;", "50"),
+        "warmup": ("İki sayı oku; `void ikiyeKatla(int& n)` fonksiyonu yaz ve ilk sayıyı referansla iki katına çıkar. Sonra `a b` biçiminde yazdır.", "Прочитай два числа; напиши `void ikiyeKatla(int& n)` и удвой первое число по ссылке. Затем выведи `a b`.",
+                   '#include <iostream>\n// ikiyeKatla\nint main() {\n    int a, b;\n    std::cin >> a >> b;\n    return 0;\n}', [("3 4", "6 4"), ("-2 0", "-4 0")], ["&", "ikiyeKatla"]),
+    },
+    # 11 Struct ve Sınıflar
+    {
+        "sections": [
+            S(("Struct ile veri grubu",
+               "struct Kedi { std::string ad; int yas; }; yeni bir tür tanımlar. Bu türden istediğin kadar nesne oluşturup her birinin alanlarına nokta ile erişirsin. Struct nesnelerini vector içinde tutmak, ilişkili verileri tek bir listede yönetmeni sağlar.",
+               "Группа данных в struct",
+               "struct Kedi { std::string ad; int yas; }; объявляет новый тип. Можно создать сколько угодно объектов и обращаться к их полям через точку. Хранение структур в vector позволяет управлять связанными данными одним списком.",
+               'struct Kedi {\n    std::string ad;\n    int yas;\n};\nstd::vector<Kedi> kediler{{"Luna", 3}, {"Pamuk", 5}};\nkediler[1].yas += 1;                 // Pamuk 6\nfor (const Kedi& k : kediler)\n    std::cout << k.ad << " " << k.yas << "\\n";')),
+            S(("Sık yapılan hatalar",
+               "Struct tanımının sonundaki noktalı virgülü unutmak, türü tanımından önce kullanmak ve alan adını yanlış yazmak sık görülür. Nesneyi fonksiyona değerle geçirirsen kopyası değişir; asıl nesneyi değiştirmek için referans (Kedi&) kullan.",
+               "Частые ошибки",
+               "Часто забывают точку с запятой после определения struct, используют тип до его объявления или ошибаются в имени поля. Если передать объект в функцию по значению, изменится копия; чтобы менять сам объект, используй ссылку (Kedi&).",
+               "struct Kedi { int yas; }   // ✗ ;\nvoid buyut(Kedi k)  { k.yas++; }   // kopya / копия\nvoid buyut(Kedi& k) { k.yas++; }   // ✓")),
+            S(("Kendini kontrol et",
+               "Kendi struct'ını tanımlayıp nesne oluşturabiliyor, alanlarını okuyup güncelleyebiliyor ve struct'ları vector içinde gezebiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если объявляешь свою struct, создаёшь объекты, читаешь и меняешь поля и обходишь структуры в vector.",
+               "")),
+        ],
+        "quiz": ("Bir struct nesnesinin alanına hangi işaretle erişilir? (nokta / ok / iki nokta)", "Каким знаком обращаются к полю объекта struct? (точка / стрелка / двоеточие)",
+                 {"tr": "nokta", "ru": "точка"}),
+        "predict": ("struct P { int x; int y; };", "P a{1, 2};\nP b = a;\nb.x = 5;\nstd::cout << a.x + b.x;", "6"),
+        "warmup": ("`struct Urun { std::string ad; int fiyat; };` tanımla. Ad ve fiyat oku, fiyatı %10 zamla (fiyat + fiyat / 10) ve `ad fiyat` yazdır.", "Объяви `struct Urun { std::string ad; int fiyat; };`. Прочитай имя и цену, подними цену на 10% (fiyat + fiyat / 10) и выведи `имя цена`.",
+                   '#include <iostream>\n#include <string>\n// struct Urun\nint main() {\n    return 0;\n}', [("Mama 100", "Mama 110"), ("Top 25", "Top 27")], ["struct"]),
+    },
+    # 12 Nesne Yönelimli C++
+    {
+        "sections": [
+            S(("Kurucu ve private veri",
+               "Sınıfın verisini private tutup yalnızca metotlarla değiştirmek, hatalı değerlerin içeri girmesini engeller. Kurucu (constructor) nesne oluşturulurken bir kez çalışır ve başlangıç durumunu kurar. Sonuna const yazılan metot nesneyi değiştirmeyeceğine söz verir.",
+               "Конструктор и private-данные",
+               "Если хранить данные класса как private и менять их только методами, неверные значения не попадут внутрь. Конструктор выполняется один раз при создании объекта и задаёт начальное состояние. Метод с const в конце обещает не менять объект.",
+               "class Kahraman {\n    int can;\npublic:\n    Kahraman(int baslangic) : can(baslangic) {}\n    void hasarAl(int h) { can = std::max(0, can - h); }\n    int durum() const { return can; }\n};\nKahraman k(30);\nk.hasarAl(12);\nstd::cout << k.durum();   // 18")),
+            S(("Sık yapılan hatalar",
+               "class içinde varsayılan erişim private'tır; public: yazmayı unutursan metotlara dışarıdan erişemezsin. Kurucunun adı sınıfın adıyla aynıdır ve dönüş türü yazılmaz. private bir alanı dışarıdan değiştirmeye çalışmak (k.can = 5) derleme hatası verir; bu bir koruma özelliğidir.",
+               "Частые ошибки",
+               "По умолчанию члены class — private; без public: методы недоступны снаружи. Имя конструктора совпадает с именем класса, тип возврата не пишется. Попытка изменить private-поле снаружи (k.can = 5) — ошибка компиляции, и это защита.",
+               "class A { int x; };\nA a;\na.x = 5;     // ✗ private")),
+            S(("Kendini kontrol et",
+               "Kurucu yazabiliyor, veriyi private tutup metotlarla yönetebiliyor ve struct ile class arasındaki varsayılan erişim farkını açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если пишешь конструктор, хранишь данные в private и управляешь ими методами, а также объясняешь разницу доступа по умолчанию у struct и class.",
+               "")),
+        ],
+        "quiz": ("class içinde erişim belirtilmezse üyeler nasıldır? (private / public / protected)", "Каков доступ к членам class по умолчанию? (private / public / protected)", "private"),
+        "predict": ("class Sayac { int n = 0; public: void art() { n += 2; } int al() const { return n; } };", "Sayac s;\ns.art();\ns.art();\ns.art();\nstd::cout << s.al();", "6"),
+        "warmup": ("`class Hesap` yaz: kurucu başlangıç bakiyesini alsın, `yatir(int)` ve `bakiye()` metotları olsun. Başlangıç ve yatırılacak tutarı oku, son bakiyeyi yazdır.", "Напиши `class Hesap`: конструктор принимает начальный баланс, есть методы `yatir(int)` и `bakiye()`. Прочитай начальную сумму и взнос, выведи итоговый баланс.",
+                   '#include <iostream>\n// class Hesap\nint main() {\n    return 0;\n}', [("100 50", "150"), ("0 7", "7")], ["class", "public"]),
+    },
+    # 13 STL ve Algoritmalar
+    {
+        "sections": [
+            S(("Sık kullanılan algoritmalar",
+               "<algorithm> başlığı onlarca hazır algoritma sunar: std::sort sıralar, std::reverse ters çevirir, std::max_element en büyüğü bulur, std::count bir değerin kaç kez geçtiğini sayar. Hepsi bir aralık alır: v.begin() başlangıç, v.end() son elemanın bir sonrası.",
+               "Популярные алгоритмы",
+               "Заголовок <algorithm> даёт десятки готовых алгоритмов: std::sort сортирует, std::reverse разворачивает, std::max_element находит максимум, std::count считает вхождения значения. Все они принимают диапазон: v.begin() — начало, v.end() — позиция после последнего элемента.",
+               "std::vector<int> v{5, 1, 4, 1};\nstd::sort(v.begin(), v.end());       // 1 1 4 5\nstd::reverse(v.begin(), v.end());    // 5 4 1 1\nint enBuyuk = *std::max_element(v.begin(), v.end());  // 5\nint birler = std::count(v.begin(), v.end(), 1);        // 2")),
+            S(("Sık yapılan hatalar",
+               "<algorithm> eklemeyi unutmak, max_element'in değer değil iterator döndürdüğünü gözden kaçırmak (* ile değeri alırsın) ve boş bir vector'de max_element sonucunu okumak sık yapılır. Büyükten küçüğe sıralamak için std::greater<int>() veya ters bir karşılaştırıcı verirsin.",
+               "Частые ошибки",
+               "Забывают подключить <algorithm>, упускают, что max_element возвращает итератор, а не значение (значение берут через *), и читают результат max_element на пустом vector. Для сортировки по убыванию передают std::greater<int>() или обратный компаратор.",
+               "auto it = std::max_element(v.begin(), v.end());\nstd::cout << it;    // ✗\nstd::cout << *it;   // ✓\nstd::sort(v.begin(), v.end(), std::greater<int>());  // 5 4 1 1")),
+            S(("Kendini kontrol et",
+               "sort, reverse, count ve max_element'i doğru aralıkla çağırabiliyor ve iterator ile değer arasındaki farkı açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если вызываешь sort, reverse, count и max_element с правильным диапазоном и объясняешь разницу между итератором и значением.",
+               "")),
+        ],
+        "quiz": ("Bir aralıktaki en büyük elemanın iterator'ını döndüren fonksiyon hangisidir? (max_element / max / sort)", "Какая функция возвращает итератор на максимальный элемент диапазона? (max_element / max / sort)", "max_element"),
+        "predict": ("", "std::vector<int> v{3, 1, 2};\nstd::sort(v.begin(), v.end());\nstd::reverse(v.begin(), v.end());\nstd::cout << v[0] << v[2];", "31"),
+        "warmup": ("n ve n sayı oku; kaç tane sıfır olduğunu std::count ile bulup yazdır.", "Прочитай n и n чисел; посчитай нули через std::count и выведи.",
+                   '#include <iostream>\n#include <vector>\n#include <algorithm>\nint main() {\n    int n;\n    std::cin >> n;\n    return 0;\n}', [("5\n0 1 0 2 0", "3"), ("3\n1 2 3", "0"), ("1\n0", "1")], ["std::count"]),
+    },
+    # 14 Dosyalar ve Hata Yönetimi
+    {
+        "sections": [
+            S(("Dosyaya yaz, geri oku",
+               "std::ofstream out(\"kayit.txt\"); dosyayı yazmak için açar ve cout gibi << ile yazarsın. std::ifstream ile aynı dosyayı açıp >> ile değerleri geri okursun. Açılış başarısızsa akış false gibi davranır; if (!in) ile kontrol edersin. Beklenmedik bir durumda throw ile istisna fırlatır, catch ile yakalarsın.",
+               "Запиши в файл и прочитай",
+               "std::ofstream out(\"kayit.txt\"); открывает файл для записи, а писать можно через <<, как в cout. std::ifstream открывает тот же файл, и значения читаются через >>. Если открыть не удалось, поток ведёт себя как false — проверяй if (!in). В неожиданной ситуации бросай исключение через throw и перехватывай через catch.",
+               '{\n    std::ofstream out("kayit.txt");\n    out << "Luna " << 120;\n}                                  // dosya kapandı / файл закрыт\nstd::ifstream in("kayit.txt");\nif (!in) throw std::runtime_error("acilamadi");\nstd::string ad; int xp;\nin >> ad >> xp;                    // Luna 120')),
+            S(("Sık yapılan hatalar",
+               "Yazdığın dosyayı kapatmadan (kapsam bitmeden) okumaya çalışmak boş sonuç verebilir. Açılışı kontrol etmemek hatayı sessizce gizler. catch (...) her şeyi yakalar ama ne olduğunu söylemez; mümkünse catch (const std::exception& e) ile e.what() mesajını göster.",
+               "Частые ошибки",
+               "Чтение файла до его закрытия (до конца области видимости) может вернуть пустоту. Без проверки открытия ошибка молча скрывается. catch (...) ловит всё, но не говорит что; по возможности пиши catch (const std::exception& e) и показывай e.what().",
+               'try {\n    throw std::runtime_error("bos kayit");\n} catch (const std::exception& e) {\n    std::cout << e.what();   // bos kayit\n}')),
+            S(("Kendini kontrol et",
+               "ofstream/ifstream ile yazıp okuyabiliyor, açılışı kontrol edebiliyor ve try → throw → catch akışını adım adım anlatabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если пишешь и читаешь через ofstream/ifstream, проверяешь открытие и можешь по шагам объяснить путь try → throw → catch.",
+               "")),
+        ],
+        "quiz": ("Bir istisnayı bilerek oluşturan anahtar sözcük hangisidir? (throw / catch / try)", "Какое ключевое слово создаёт исключение? (throw / catch / try)", "throw"),
+        "predict": ("", 'try {\n    std::cout << "A";\n    throw 1;\n    std::cout << "B";\n} catch (int) {\n    std::cout << "C";\n}\nstd::cout << "D";', "ACD"),
+        "warmup": ("Bir tam sayı oku. Negatifse `throw std::runtime_error(\"negatif\")` ile hata fırlat ve catch içinde `Hata: negatif` yazdır; değilse sayıyı yazdır.", "Прочитай целое число. Если оно отрицательное, брось `throw std::runtime_error(\"negatif\")` и в catch выведи `Hata: negatif`; иначе выведи число.",
+                   '#include <iostream>\n#include <stdexcept>\nint main() {\n    int n;\n    std::cin >> n;\n    // try / throw / catch\n    return 0;\n}', [("5", "5"), ("-3", "Hata: negatif"), ("0", "0")], ["throw", "catch"]),
+    },
+    # 15 Final Projesi
+    {
+        "sections": [
+            S(("Bir projeyi parçalara böl",
+               "Önce girdileri ve beklenen çıktıyı yaz. Sonra programı küçük fonksiyonlara böl: girdiyi oku, hesapla, sonucu yazdır. Her parçayı ayrı ayrı dene; önce en basit sürüm çalışsın, ardından özellik ekle. Anlamlı isimler kodu kendiliğinden açıklar.",
+               "Раздели проект на части",
+               "Сначала запиши входные данные и ожидаемый вывод. Затем раздели программу на маленькие функции: прочитать ввод, посчитать, вывести результат. Проверяй каждую часть отдельно: сначала пусть заработает простая версия, потом добавляй возможности. Понятные имена объясняют код сами.",
+               'int toplamPuan(const std::vector<int>& puanlar) {\n    int t = 0;\n    for (int p : puanlar) t += p;\n    return t;\n}\nstd::string rutbe(int puan) {\n    if (puan >= 100) return "Usta";\n    if (puan >= 50)  return "Gezgin";\n    return "Cirak";\n}')),
+            S(("Sık yapılan hatalar",
+               "Her şeyi tek seferde main içine yazmak hata bulmayı zorlaştırır. Yalnızca örnek girdiyle test etmek sınır durumlarını kaçırır: 0, negatif değer, tek eleman ve en büyük değer gibi durumları da dene. Çıktıdaki fazladan boşluk veya eksik satır testleri başarısız yapar.",
+               "Частые ошибки",
+               "Если писать всё сразу в main, ошибки трудно искать. Проверка только на примере пропускает граничные случаи: пробуй 0, отрицательные значения, один элемент и максимальное значение. Лишний пробел или пропущенная строка в выводе провалят тесты.",
+               "// ✓ 0\n// ✓ -5\n// ✓ 1 eleman / 1 элемент\n// ✓ en büyük / максимум")),
+            S(("Kendini kontrol et",
+               "Bir problemi fonksiyonlara bölebiliyor, sınır durumlarını test edebiliyor ve çıktıyı tam olarak istenen biçimde üretebiliyorsan final görevine hazırsın.",
+               "Проверь себя",
+               "Ты готов к финалу, если делишь задачу на функции, проверяешь граничные случаи и выводишь результат ровно в нужном формате.",
+               "")),
+        ],
+        "quiz": ("Büyük bir programı yönetmenin en iyi yolu hangisidir? (küçük fonksiyonlara bölmek / her şeyi main'e yazmak / testi atlamak)",
+                 "Как лучше всего управлять большой программой? (разбить на маленькие функции / писать всё в main / пропустить тесты)",
+                 {"tr": "küçük fonksiyonlara bölmek", "ru": "разбить на маленькие функции"}),
+        "predict": ('std::string rutbe(int p) { if (p >= 100) return "Usta"; if (p >= 50) return "Gezgin"; return "Cirak"; }', "std::cout << rutbe(50) << rutbe(49);", "GezginCirak"),
+        "warmup": ("n görev puanı oku; toplamı ve ortalamayı (tam sayı bölmesi) `toplam ortalama` biçiminde yazdır.", "Прочитай n баллов за задания; выведи сумму и среднее (целочисленное деление) как `сумма среднее`.",
+                   '#include <iostream>\nint main() {\n    int n;\n    std::cin >> n;\n    return 0;\n}', [("3\n10 20 30", "60 20"), ("1\n7", "7 7"), ("2\n5 6", "11 5")], []),
+    },
+    # 16 Pointer ve Dinamik Bellek
+    {
+        "sections": [
+            S(("Stack ve heap",
+               "Fonksiyon içindeki normal değişkenler stack'te yaşar ve kapsam bitince otomatik silinir. new ile ayrılan bellek heap'tedir ve sen delete diyene kadar orada kalır. Pointer, heap'teki bu bloğa ulaşmanın tek yoludur; adresi kaybedersen bloğu bir daha serbest bırakamazsın ve bellek sızar.",
+               "Stack и heap",
+               "Обычные переменные функции живут в stack и удаляются автоматически в конце области видимости. Память, выделенная через new, находится в heap и живёт, пока ты не вызовешь delete. Указатель — единственный путь к этому блоку; потеряв адрес, освободить блок уже нельзя — это утечка.",
+               "int* p = new int(7);           // heap\n*p += 3;                       // 10\nint* dizi = new int[3]{1, 2, 3};\nstd::cout << *p + dizi[2];     // 13\ndelete p;\ndelete[] dizi;\np = nullptr;")),
+            S(("Sık yapılan hatalar",
+               "new[] ile ayrılan diziyi köşeli parantezsiz delete ile silmek, aynı bloğu iki kez silmek ve silinmiş bloğu kullanmak (dangling pointer) tanımsız davranıştır. delete'ten sonra pointer'ı nullptr yapmak bu hatalara karşı iyi bir alışkanlıktır.",
+               "Частые ошибки",
+               "Удаление массива из new[] через delete без скобок, двойное удаление одного блока и использование уже освобождённого блока (висячий указатель) — неопределённое поведение. Присваивать указателю nullptr после delete — хорошая привычка против этих ошибок.",
+               "int* p = new int(5);\ndelete p;\nstd::cout << *p;   // ✗ dangling\nint* d = new int[4];\ndelete d;          // ✗ delete[]")),
+            S(("Kendini kontrol et",
+               "Stack ile heap'i ayırabiliyor, new/delete ve new[]/delete[] eşleşmesini doğru kurabiliyor ve sızıntı ile dangling pointer arasındaki farkı açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если различаешь stack и heap, правильно сочетаешь new/delete и new[]/delete[] и объясняешь разницу между утечкой и висячим указателем.",
+               "")),
+        ],
+        "quiz": ("new int[5] ile ayrılan bellek nasıl serbest bırakılır? (delete[] / delete / free)", "Как освободить память, выделенную new int[5]? (delete[] / delete / free)", "delete[]"),
+        "predict": ("", "int* p = new int(4);\nint* q = p;\n*q += 6;\nstd::cout << *p;\ndelete p;", "10"),
+        "warmup": ("n ve n sayı oku; `new int[n]` ile dizi ayır, sayıları sakla, en büyüğünü yazdır ve `delete[]` ile belleği bırak.", "Прочитай n и n чисел; выдели `new int[n]`, сохрани числа, выведи максимум и освободи память через `delete[]`.",
+                   '#include <iostream>\nint main() {\n    int n;\n    std::cin >> n;\n    // new int[n] ... delete[]\n    return 0;\n}', [("3\n4 9 2", "9"), ("1\n-3", "-3")], ["new", "delete"]),
+    },
+    # 17 Akıllı İşaretçiler ve RAII
+    {
+        "sections": [
+            S(("Sahiplik kuralları",
+               "unique_ptr bir nesnenin tek sahibidir; kapsam bitince nesneyi kendisi siler, sen delete yazmazsın. Sahipliği başka bir değişkene vermek için std::move kullanırsın ve eski unique_ptr boş (nullptr) kalır. shared_ptr sahipliği paylaşır; son sahip yok olduğunda nesne silinir.",
+               "Правила владения",
+               "unique_ptr — единственный владелец объекта: он сам удаляет объект в конце области видимости, delete писать не нужно. Чтобы передать владение, используют std::move, после чего старый unique_ptr становится пустым (nullptr). shared_ptr разделяет владение; объект удаляется, когда исчезает последний владелец.",
+               "auto a = std::make_unique<int>(5);\nauto b = std::move(a);          // a → nullptr\nstd::cout << (a == nullptr);    // 1\nauto s1 = std::make_shared<int>(9);\n{\n    auto s2 = s1;\n    std::cout << s1.use_count();  // 2\n}\nstd::cout << s1.use_count();    // 1")),
+            S(("Sık yapılan hatalar",
+               "unique_ptr'ı kopyalamaya çalışmak derlenmez; std::move gerekir. move'dan sonra eski işaretçiyi kullanmak boş işaretçi hatasıdır. Aynı ham pointer'ı iki ayrı akıllı işaretçiye vermek nesnenin iki kez silinmesine yol açar; nesneleri make_unique / make_shared ile oluştur.",
+               "Частые ошибки",
+               "Копирование unique_ptr не компилируется — нужен std::move. Использование старого указателя после move — обращение к пустому указателю. Передача одного сырого указателя двум умным указателям приведёт к двойному удалению; создавай объекты через make_unique / make_shared.",
+               "auto a = std::make_unique<int>(1);\nauto b = a;              // ✗\nauto c = std::move(a);   // ✓\nstd::cout << *a;         // ✗ a boş / a пуст")),
+            S(("Kendini kontrol et",
+               "unique_ptr ile shared_ptr'ı ne zaman kullanacağını, std::move'un ne yaptığını ve RAII'nin kaynağı neden kendiliğinden bıraktığını açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если знаешь, когда нужен unique_ptr, а когда shared_ptr, что делает std::move и почему RAII освобождает ресурс автоматически.",
+               "")),
+        ],
+        "quiz": ("unique_ptr'ın sahipliğini başka değişkene devretmek için ne kullanılır? (std::move / std::copy / delete)", "Что используют, чтобы передать владение unique_ptr? (std::move / std::copy / delete)", "std::move"),
+        "predict": ("", "auto s = std::make_shared<int>(3);\nauto t = s;\nauto u = t;\n*u += 1;\nstd::cout << *s << s.use_count();", "43"),
+        "warmup": ("Bir sayı oku; `std::make_unique<int>` ile sakla, değeri 3 katına çıkar ve `std::move` ile ikinci bir unique_ptr'a devret. İkinci işaretçinin gösterdiği değeri yazdır.", "Прочитай число; сохрани через `std::make_unique<int>`, утрой значение и передай через `std::move` второму unique_ptr. Выведи значение второго указателя.",
+                   '#include <iostream>\n#include <memory>\nint main() {\n    int n;\n    std::cin >> n;\n    return 0;\n}', [("4", "12"), ("-2", "-6")], ["make_unique", "std::move"]),
+    },
+    # 18 Kalıtım ve Polimorfizm
+    {
+        "sections": [
+            S(("Polimorfik bir liste",
+               "Taban sınıfta virtual işaretlenen metot, çağrı anında gerçek nesnenin türüne bakılarak seçilir. Böylece farklı türleri tek bir taban sınıf listesinde tutup aynı çağrıyla her birinin kendi davranışını çalıştırırsın. Polimorfik taban sınıfa virtual yıkıcı eklemek türemiş nesnenin de düzgün silinmesini sağlar.",
+               "Полиморфный список",
+               "Метод, помеченный virtual в базовом классе, выбирается во время вызова по реальному типу объекта. Так разные типы можно хранить в одном списке базового класса и одним вызовом запускать поведение каждого. Виртуальный деструктор в полиморфной базе гарантирует корректное удаление производных объектов.",
+               'struct Hayvan {\n    virtual std::string ses() const { return "..."; }\n    virtual ~Hayvan() = default;\n};\nstruct Kedi : Hayvan { std::string ses() const override { return "Miyav"; } };\nstruct Kopek : Hayvan { std::string ses() const override { return "Hav"; } };\nstd::vector<std::unique_ptr<Hayvan>> v;\nv.push_back(std::make_unique<Kedi>());\nv.push_back(std::make_unique<Kopek>());\nfor (auto& h : v) std::cout << h->ses() << " ";   // Miyav Hav')),
+            S(("Sık yapılan hatalar",
+               "virtual unutulursa taban referansı her zaman taban metodunu çağırır. Türemiş nesneyi değerle taban türüne kopyalamak (Hayvan h = k;) nesneyi dilimler ve türemiş kısım kaybolur; referans veya pointer kullan. override yazmak, imza uyuşmazlığını derleyicinin yakalamasını sağlar.",
+               "Частые ошибки",
+               "Без virtual ссылка на базу всегда вызывает метод базы. Копирование производного объекта по значению в базовый тип (Hayvan h = k;) «срезает» объект, и производная часть теряется — используй ссылку или указатель. override помогает компилятору поймать несовпадение сигнатуры.",
+               'Kedi k;\nHayvan h = k;           // ✗ dilimleme / срезка\nstd::cout << h.ses();   // ...\nHayvan& r = k;\nstd::cout << r.ses();   // Miyav')),
+            S(("Kendini kontrol et",
+               "Kalıtımla ortak davranışı paylaşabiliyor, virtual/override ile polimorfik çağrı kurabiliyor ve dilimleme hatasını açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если выносишь общее поведение в базовый класс, строишь полиморфный вызов через virtual/override и объясняешь ошибку срезки.",
+               "")),
+        ],
+        "quiz": ("Türemiş sınıfta taban metodu yeniden yazdığını derleyiciye bildiren sözcük hangisidir? (override / static / final)", "Какое слово в производном классе сообщает компилятору, что метод базы переопределяется? (override / static / final)", "override"),
+        "predict": ("struct A { virtual int f() const { return 1; } int g() const { return 10; } virtual ~A() = default; };\nstruct B : A { int f() const override { return 2; } int g() const { return 20; } };",
+                    "B b;\nconst A& r = b;\nstd::cout << r.f() + r.g();", "12"),
+        "warmup": ("`Sekil` taban sınıfında sanal `int alan() const` olsun; `Kare(int a)` onu override etsin. Bir kenar oku ve Kare'yi `const Sekil&` üzerinden çağırıp alanı yazdır.", "В базовом классе `Sekil` объяви виртуальный `int alan() const`; класс `Kare(int a)` переопределяет его. Прочитай сторону и выведи площадь, вызвав метод через `const Sekil&`.",
+                   '#include <iostream>\n// Sekil ve Kare\nint main() {\n    int a;\n    std::cin >> a;\n    return 0;\n}', [("4", "16"), ("0", "0")], ["virtual", "override"]),
+    },
+    # 19 Şablonlar ve Lambda
+    {
+        "sections": [
+            S(("Şablon ve lambda birlikte",
+               "Şablon, türü kullanım anında belirlenen bir kalıptır; derleyici enKucuk<int> ve enKucuk<double> için ayrı kod üretir. Lambda ise algoritmalara küçük davranışlar vermek için idealdir: std::sort'a karşılaştırıcı, std::count_if'e koşul olarak verilir.",
+               "Шаблоны и лямбды вместе",
+               "Шаблон — заготовка, тип которой определяется при использовании; компилятор создаёт отдельный код для enKucuk<int> и enKucuk<double>. Лямбда идеальна, чтобы передать алгоритму небольшое поведение: компаратор в std::sort или условие в std::count_if.",
+               "template <typename T>\nT enKucuk(T a, T b) { return a < b ? a : b; }\nstd::vector<int> v{5, 2, 9, 4};\nint esik = 4;\nint buyukler = std::count_if(v.begin(), v.end(),\n    [esik](int x) { return x > esik; });                     // 2\nstd::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });   // 9 5 4 2")),
+            S(("Sık yapılan hatalar",
+               "Lambda dış bir değişkeni yakalamazsa (boş []) onu kullanamaz. [=] kopyalayarak, [&] referansla yakalar; referansla yakalanan değişken lambda çağrılmadan önce yok olursa tehlikelidir. Şablon farklı türlerle çağrılırsa (enKucuk(3, 2.5)) T çıkarılamaz; türü açıkça yaz: enKucuk<double>(3, 2.5).",
+               "Частые ошибки",
+               "Лямбда без захвата (пустые []) не видит внешнюю переменную. [=] захватывает копией, [&] — по ссылке; если захваченная по ссылке переменная исчезнет до вызова, это опасно. При вызове шаблона с разными типами (enKucuk(3, 2.5)) T не выводится — укажи тип явно: enKucuk<double>(3, 2.5).",
+               "int k = 2;\nauto f = [](int x) { return x * k; };    // ✗\nauto g = [k](int x) { return x * k; };   // ✓\nenKucuk(3, 2.5);           // ✗\nenKucuk<double>(3, 2.5);   // ✓ 2.5")),
+            S(("Kendini kontrol et",
+               "Basit bir şablon fonksiyon yazabiliyor, lambda'yı sort ve count_if ile kullanabiliyor ve [x], [&x], [=] yakalamalarını açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если пишешь простой шаблон функции, используешь лямбды с sort и count_if и объясняешь захваты [x], [&x], [=].",
+               "")),
+        ],
+        "quiz": ("Lambda'da tüm dış değişkenleri referansla yakalayan liste hangisidir? ([&] / [=] / [])", "Какой список захвата в лямбде захватывает все внешние переменные по ссылке? ([&] / [=] / [])", "[&]"),
+        "predict": ("", "int t = 0;\nauto ekle = [&t](int x) { t += x; };\nekle(4);\nekle(5);\nstd::cout << t;", "9"),
+        "warmup": ("n ve n sayı oku; bir lambda ile çift sayıları `std::count_if` kullanarak say ve yazdır.", "Прочитай n и n чисел; посчитай чётные через `std::count_if` с лямбдой и выведи.",
+                   '#include <iostream>\n#include <vector>\n#include <algorithm>\nint main() {\n    int n;\n    std::cin >> n;\n    return 0;\n}', [("5\n1 2 3 4 6", "3"), ("2\n1 3", "0")], ["count_if"]),
+    },
+    # 20 map, set ve Konteynerler
+    {
+        "sections": [
+            S(("map ile sayma ve arama",
+               "m[anahtar] erişimi, anahtar yoksa varsayılan değerle yeni bir kayıt oluşturur; yalnızca kontrol etmek istiyorsan m.count(k) veya m.find(k) kullan. map ve set elemanları her zaman anahtara göre sıralı gezilir. set.insert aynı değeri ikinci kez eklemez.",
+               "Подсчёт и поиск с map",
+               "Обращение m[ключ] создаёт новую запись со значением по умолчанию, если ключа нет; для простой проверки используй m.count(k) или m.find(k). Элементы map и set всегда обходятся в порядке ключей. set.insert не добавляет одно значение дважды.",
+               'std::map<std::string, int> stok;\nstok["mama"] += 3;\nstok["top"] = 2;\nstok["mama"] += 1;                         // mama 4\nfor (const auto& [urun, adet] : stok)\n    std::cout << urun << " " << adet << "\\n";  // mama 4 / top 2\nstd::cout << stok.count("ip");             // 0\nstd::set<char> harfler{\'k\', \'e\', \'d\', \'i\', \'k\'};   // 4')),
+            S(("Sık yapılan hatalar",
+               "Sadece varlık kontrolü için m[k] kullanmak, olmayan anahtarı 0 değeriyle ekler ve boyutu büyütür. unordered_map sıralı değildir; sıralı çıktı istiyorsan map kullan. set elemanları yerinde değiştirilemez; değiştirmek için silip yeniden eklersin.",
+               "Частые ошибки",
+               "Проверка наличия через m[k] добавляет отсутствующий ключ со значением 0 и увеличивает размер. unordered_map не упорядочен — для упорядоченного вывода нужен map. Элементы set нельзя менять на месте: удали и вставь заново.",
+               'std::map<std::string, int> m;\nif (m["yok"] == 0) {}        // ✗ "yok" eklendi / добавлен\nstd::cout << m.size();        // 1\nif (m.find("baska") == m.end()) {}   // ✓')),
+            S(("Kendini kontrol et",
+               "map ile sayaç tutabiliyor, find/count ile güvenli arama yapabiliyor ve set'in tekrarları nasıl engellediğini açıklayabiliyorsan hazırsın.",
+               "Проверь себя",
+               "Ты готов, если ведёшь счётчики в map, безопасно ищешь через find/count и объясняешь, как set отбрасывает повторы.",
+               "")),
+        ],
+        "quiz": ("map'te bir anahtarı kayıt eklemeden aramak için hangisi kullanılır? (find / operator[] / push_back)", "Что использовать, чтобы найти ключ в map, не добавляя запись? (find / operator[] / push_back)", "find"),
+        "predict": ("", 'std::map<char, int> m;\nfor (char c : std::string("kedi")) m[c]++;\nm[\'k\']++;\nstd::cout << m.size() << m[\'k\'];', "42"),
+        "warmup": ("n sayı oku; `std::set` ile tekrarları ele ve kaç farklı sayı olduğunu yazdır.", "Прочитай n чисел; отбрось повторы с помощью `std::set` и выведи количество различных.",
+                   '#include <iostream>\n#include <set>\nint main() {\n    int n;\n    std::cin >> n;\n    return 0;\n}', [("5\n1 2 2 3 1", "3"), ("1\n7", "1"), ("4\n5 5 5 5", "1")], ["set"]),
+    },
+]
+
+
+def extra_guide(index, language):
+    """Lesson sections for chapter `index` (0-based) as (title, text, code) lists."""
+    rows = []
+    for tr_title, tr_text, ru_title, ru_text, code in CHAPTERS[index]["sections"]:
+        rows.append((tr_title, tr_text, code) if language == "tr" else (ru_title, ru_text, code))
+    return rows
+
+
+def _case(input_text, expected):
+    return {"input": input_text, "expected": expected}
+
+
+def extra_tasks(index, prefix):
+    """Three more missions per chapter: second quiz, second prediction and a warm-up program."""
+    data = CHAPTERS[index]
+    q_tr, q_ru, answer = data["quiz"]
+    pre, body, output = data["predict"]
+    shown = (pre + "\n" if pre else "") + body
+    w_tr, w_ru, starter, cases, requires = data["warmup"]
+    hints_quiz = {"tr": ["Ders notlarındaki 'Adım adım' bölümüne bak.", "Seçeneklerden birine tıklayabilirsin.", "Yanlış seçeneklerin neden yanlış olduğunu düşün."],
+                  "ru": ["Посмотри раздел «Шаг за шагом» в уроке.", "Можно нажать на один из вариантов.", "Подумай, почему остальные варианты неверны."]}
+    hints_predict = {"tr": ["Kodu satır satır, değişkenlerin değerini not alarak izle.", "Her satırdan sonra hangi değişkenin değiştiğini yaz.", "Yalnızca ekrana yazılanı gir; boşluk ekleme."],
+                     "ru": ["Пройди код построчно, записывая значения переменных.", "После каждой строки отметь, какая переменная изменилась.", "Введи только то, что выводится на экран, без лишних пробелов."]}
+    hints_warm = {"tr": ["Önce girdiyi oku, sonra hesapla, en son yazdır.", "Ders notlarındaki kod örneği bu görevin iskeletine çok benziyor.", "Kodunda şu öğeler olmalı: " + (", ".join(requires) or "girdi ve çıktı") + "."],
+                  "ru": ["Сначала прочитай ввод, затем посчитай, в конце выведи.", "Пример кода из урока очень похож на каркас задания.", "В коде должны быть: " + (", ".join(requires) or "ввод и вывод") + "."]}
+    quiz = {"id": prefix + "-q2", "kind": "quiz", "xp": 15, "title": {"tr": "Kavram Sorusu", "ru": "Вопрос на понимание"},
+            "prompt": {"tr": q_tr, "ru": q_ru}, "starter": {"tr": "Doğru yanıtı seç veya yaz.", "ru": "Выбери или напиши правильный ответ."},
+            "expected": "", "answer": answer, "tests": [_case("", "")], "hints": hints_quiz}
+    predict = {"id": prefix + "-p2", "kind": "predict", "xp": 20, "title": {"tr": "Kodu Zihninde Çalıştır", "ru": "Выполни код в уме"},
+               "prompt": {"tr": f"Aşağıdaki kodun konsol çıktısını yaz. Yalnızca çıktıyı gir:\n{shown}", "ru": f"Напиши вывод этого кода. Введи только результат:\n{shown}"},
+               "starter": output, "expected": output, "answer": output, "tests": [_case("", output)], "hints": hints_predict}
+    warm = {"id": prefix + "-w1", "kind": "code", "xp": 30, "title": {"tr": "Isınma Görevi", "ru": "Разминка"},
+            "prompt": {"tr": w_tr + "\nÇıktı yalnızca istenen değerler olmalı.", "ru": w_ru + "\nВыводи только требуемые значения."},
+            "starter": starter, "expected": cases[0][1], "input": cases[0][0], "answer": "",
+            "tests": [_case(i, o) for i, o in cases], "requires": list(requires), "hints": hints_warm}
+    return quiz, predict, warm
+
+
+def predict_program(index):
+    """Full C++ program for verifying a chapter's second prediction (used by tests)."""
+    pre, body, _ = CHAPTERS[index]["predict"]
+    headers = "#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <map>\n#include <set>\n#include <memory>\n#include <stdexcept>\n"
+    return headers + pre + "\nint main() {\n" + body + "\nreturn 0;\n}\n"

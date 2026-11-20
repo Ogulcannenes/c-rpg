@@ -1,1 +1,38 @@
 .multi-workspace{margin-top:20px;padding:18px}.multi-workspace h2{margin:4px 0;font-size:17px}.workspace-create{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin:12px 0;padding:12px;border:1px solid #40375a;border-radius:10px;background:#171723}.workspace-grid{display:grid;grid-template-columns:minmax(210px,.32fr) minmax(0,1fr);gap:12px;margin-top:12px}.workspace-files,.workspace-main{min-width:0;padding:12px;border:1px solid #2d3140;border-radius:10px;background:#10131c}.workspace-files{display:flex;flex-direction:column;gap:9px}.workspace-files label,.workspace-main label,.workspace-create label{display:grid;gap:5px;color:#b9bdcb;font-size:10px}.workspace-files input,.workspace-files select,.workspace-main textarea,.workspace-create input{width:100%;box-sizing:border-box;padding:9px;border:1px solid #383c4d;border-radius:7px;background:#0b0e15;color:#f2efff;font:11px 'JetBrains Mono',Consolas,monospace}.file-list{display:grid;gap:5px;max-height:260px;overflow:auto}.file-list>b{font-size:10px;color:#a993e8;padding:3px}.workspace-file{text-align:left;border:1px solid transparent;border-radius:6px;background:#171a25;color:#c8c9d5;padding:8px;font:10px 'JetBrains Mono',Consolas,monospace;overflow-wrap:anywhere}.workspace-file.selected{border-color:#8d6ae0;background:#262137;color:#fff}.workspace-editor{height:360px;margin-bottom:10px}.workspace-main .editor-actions{margin:8px 0}.workspace-main .console{margin-top:10px;min-height:72px;white-space:pre-wrap}.console-result{display:grid;gap:5px}.console-result pre{max-height:220px;overflow:auto;margin:3px 0;padding:8px;border-radius:6px;background:#0a0c12;color:#d0d1de;white-space:pre-wrap}.console-result.run-success>b{color:#74dfaa}.console-result.run-error>b{color:#ff8292}.multi-workspace .view-lead{margin-bottom:0}.multi-workspace .tip{line-height:1.5}@media(max-width:800px){.workspace-grid{grid-template-columns:1fr}.workspace-editor{height:300px}}
+
+/* Proje atölyesi eklentileri */
+.project-stars{color:#ffd58a;letter-spacing:1px}
+.project-concepts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.project-concepts span{padding:3px 9px;border-radius:99px;background:#241e38;border:1px solid #3d3262;color:#d7c8ff;font-size:11px;font-weight:600}
+.project-desc{font-size:13.5px!important;line-height:1.65!important;color:#d0d3df!important}
+.project-desc code.inline-code,.project-step code.inline-code{padding:1px 6px;border-radius:5px;background:#231f36;border:1px solid #3a3358;color:#e3d4ff;font:12px 'JetBrains Mono',Consolas,monospace}
+.project-steps{margin:12px 0;padding:12px 14px;border-radius:12px;background:#141726;border:1px solid #2c2a44}
+.project-steps-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.project-steps-head b{font-size:12.5px;white-space:nowrap}
+.project-steps-bar{flex:1;height:7px;border-radius:99px;background:#262a3e;overflow:hidden}
+.project-steps-bar span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a885ff,#70e0ae);transition:width .4s}
+.project-steps ol{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+.project-step label{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#d0d3df;cursor:pointer;line-height:1.5}
+.project-step input{margin-top:3px;accent-color:#a885ff}
+.project-step.done span{color:#8e94b0;text-decoration:line-through}
+.project-input-label{display:grid;gap:4px;padding:8px 12px 0;font-size:11px;color:#9095a7}
+.project-input-label textarea{margin-top:0!important;font:12px 'JetBrains Mono',Consolas,monospace;resize:vertical}
+.project-verdict{margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid;font-size:13px}
+.project-verdict.ok{background:#14241f;border-color:#2a6956;color:#b6f4d6}
+.project-verdict.bad{background:#1f1218;border-color:#7a2f3e;color:#ffd0d6}
+.project-verdict ul{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 6px;padding:0;list-style:none}
+.project-verdict li{padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700}
+.project-verdict li.ok{background:#1e3933;color:#8fe8c0}.project-verdict li.bad{background:#3a1a22;color:#ffb3bd}
+.project-verdict p{margin:6px 0}
+.ws-templates{display:grid;gap:10px;padding:16px;border-radius:12px;border:1px dashed #3d3262;background:#141726}
+.ws-templates p{margin:0;color:#c8c5d4;font-size:13px}
+.ws-template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.ws-template-card{display:grid;gap:4px;text-align:left;padding:12px;border-radius:12px;border:1px solid #33304d;background:#1a1830;color:#eee;transition:transform .2s,border-color .2s}
+.ws-template-card:hover{transform:translateY(-2px);border-color:#a885ff}
+.ws-template-card b{font-size:13px}
+.ws-template-card small{font:11px 'JetBrains Mono',monospace;color:#9095a7}
+.workspace-create select{border:1px solid #363b4b;border-radius:8px;background:#0d1017;color:#fff;padding:8px}
+.workshop-grid{display:grid;grid-template-columns:270px minmax(0,1fr);gap:16px;align-items:start}
+.workshop-grid .project-list{position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto;padding-right:2px}
+.project-card.selected{border-color:#a885ff!important;background:linear-gradient(120deg,#2a2148,#181b2b)!important}
+@media(max-width:900px){.workshop-grid{grid-template-columns:1fr}.workshop-grid .project-list{position:static;display:flex;overflow-x:auto;max-height:none}.workshop-grid .project-card{min-width:220px}}

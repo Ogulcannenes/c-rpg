@@ -1,0 +1,29 @@
+/* admin-panel.css — test paneli (sağdan açılan çekmece) */
+.admin-panel{position:fixed;top:0;right:0;bottom:0;z-index:1500;width:min(400px,94vw);display:flex;flex-direction:column;background:linear-gradient(180deg,#141726,#0e1019);border-left:1px solid #3a2a22;box-shadow:-24px 0 60px #000a;transform:translateX(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);color:#e9e9f2}
+.admin-panel.open{transform:none}
+.admin-panel header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px dashed #2c3046;background:repeating-linear-gradient(135deg,#1a1520 0 12px,#17131d 12px 24px)}
+.admin-panel header b{display:block;font-size:16px}
+.admin-panel header small{display:block;color:#ffa45c;font-size:11.5px;margin-top:3px}
+.adm-close{width:34px;height:34px;border-radius:10px;border:1px solid #33384f;background:#1a1d2c;color:#fff;font-size:20px;cursor:pointer}
+.adm-body{overflow-y:auto;padding:14px 18px 24px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.adm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.adm-stats div{background:#191c2b;border:1px solid #2a2f45;border-radius:11px;padding:8px 9px}
+.adm-stats span{display:block;font-size:10.5px;color:#9ea3ba}
+.adm-stats b{display:block;font-size:17px;margin-top:2px;font-variant-numeric:tabular-nums}
+.adm-group{border:1px solid #262a3c;border-radius:13px;padding:12px;background:#121522}
+.adm-group h3{font-size:13px;margin:0 0 9px;color:#fff}
+.adm-note{font-size:11.5px;color:#9ea3ba;margin:0 0 8px;line-height:1.5}
+.adm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+.adm-chips button,.adm-row button{border:1px solid #3a3f58;background:#1b1f30;color:#e3e4ef;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer}
+.adm-chips button:hover,.adm-row button:hover{border-color:#ffa45c;color:#fff}
+.adm-chips button.on{border-color:#5fe0cf;color:#a8f0e4}
+.adm-chips button.warn{border-color:#6a4a2a;color:#ffc58f}
+.adm-chips button.danger{border-color:#7a2f3c;color:#ff9aa6}
+.adm-chips button.armed{background:#5a1f2b;color:#fff;border-color:#ff7486}
+.adm-chips button:disabled,.adm-row button:disabled{opacity:.5;cursor:wait}
+.adm-row{display:grid;grid-template-columns:1fr 92px auto;gap:6px;align-items:center;margin-top:6px}
+.adm-row label{font-size:12px;color:#c5c8d6}
+.adm-row input,.adm-row select{min-width:0;background:#0c0e17;color:#fff;border:1px solid #33384f;border-radius:8px;padding:7px 8px;font-size:12px}
+.adm-row select{grid-column:2}
+.adm-row:has(select){grid-template-columns:auto 1fr auto}
+@media(prefers-reduced-motion:reduce){.admin-panel{transition:none}}

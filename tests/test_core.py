@@ -152,8 +152,8 @@ class CoreSystemTests(unittest.TestCase):
         self.assertTrue(any(item.get("kind") == "concept" and item["passed"] for item in accepted["tests"]))
 
     def test_debugging_arena_has_syntax_and_runtime_bugs(self):
-        syntax = server.compile_and_run(server.CURRICULUM[0]["tasks"][2]["starter"])
-        runtime = server.compile_and_run(server.CURRICULUM[13]["tasks"][2]["starter"])
+        syntax = server.compile_and_run(server.CURRICULUM[0]["tasks"][4]["starter"])
+        runtime = server.compile_and_run(server.CURRICULUM[13]["tasks"][4]["starter"])
         self.assertFalse(syntax["ok"])
         self.assertIn("error", syntax)
         self.assertFalse(runtime["ok"])
@@ -280,16 +280,16 @@ class CoreSystemTests(unittest.TestCase):
             con.close()
 
     def test_curriculum_is_bilingual_and_chapter_gated(self):
-        self.assertEqual(len(server.CURRICULUM), 15)
-        self.assertTrue(all(len(c["tasks"]) == 5 for c in server.CURRICULUM))
+        self.assertEqual(len(server.CURRICULUM), 20)
+        self.assertTrue(all(len(c["tasks"]) == 8 for c in server.CURRICULUM))
         self.assertTrue(all(set(c["title"]) == {"tr", "ru"} and set(c["lesson"]) == {"tr", "ru"} for c in server.CURRICULUM))
-        self.assertTrue(all(set(c["guide"]) == {"tr", "ru"} and len(c["guide"]["tr"]) >= 2 and len(c["guide"]["ru"]) >= 2 for c in server.CURRICULUM))
-        self.assertEqual(len({c["tasks"][0]["prompt"]["tr"] for c in server.CURRICULUM}), 15)
-        self.assertEqual(len({c["tasks"][2]["starter"] for c in server.CURRICULUM}), 15)
+        self.assertTrue(all(set(c["guide"]) == {"tr", "ru"} and len(c["guide"]["tr"]) >= 5 and len(c["guide"]["ru"]) >= 5 for c in server.CURRICULUM))
+        self.assertEqual(len({c["tasks"][0]["prompt"]["tr"] for c in server.CURRICULUM}), 20)
+        self.assertEqual(len({c["tasks"][4]["starter"] for c in server.CURRICULUM}), 20)
         known = {c["id"] for c in server.CURRICULUM}
         self.assertTrue(all(set(c["prerequisites"]) <= known for c in server.CURRICULUM))
         self.assertEqual(server.CURRICULUM[0]["prerequisites"], [])
-        self.assertEqual(server.CURRICULUM[-1]["prerequisites"], ["c12", "c13", "c14"])
+        self.assertEqual(server.CURRICULUM[14]["prerequisites"], ["c12", "c13", "c14"])
 
     def test_prerequisite_chapters_are_enforced_by_server(self):
         _, created = self.request("POST", "/api/profiles", {"name": "Map locked"})
@@ -712,7 +712,7 @@ class CoreSystemTests(unittest.TestCase):
         self.assertIn("yarn", state["owned_items"])
 
     def test_shop_has_progressive_local_prices_and_badges_are_importable(self):
-        self.assertEqual(len(server.SHOP), 10)
+        self.assertEqual(len(server.SHOP), 16)
         costs = [item["cost"] for item in server.SHOP.values()]
         self.assertEqual(costs, sorted(costs))
         _, created = self.request("POST", "/api/profiles", {"name": "Badge import"})

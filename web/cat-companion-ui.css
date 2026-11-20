@@ -43,3 +43,46 @@
 .cat-levelup-card .cat-growth-model{animation:cat-growth-celebrate .72s ease-in-out 2}
 @media(prefers-reduced-motion:reduce){.cat-levelup-overlay,.cat-levelup-card .cat-growth-model{animation:none}.cat-levelup-overlay.leaving{transition:none}}
 @media(max-width:560px){.cat-shop-feature .cat-stage-large{width:145px;height:auto;margin-right:-25px}.cat-outfit-bar{align-items:stretch;flex-direction:column}.cat-outfit-save input{width:100%;min-width:0}.cat-item-actions{grid-template-columns:1fr}.cat-loadout{flex-wrap:wrap}}
+
+/* ——— Kedi dükkânı: filtre, ürün önizlemesi, nadirlik ——— */
+.cat-wearable[data-wearable="aura"]{filter:none;animation:aura-breathe 4.5s ease-in-out infinite}
+@keyframes aura-breathe{0%,100%{opacity:.82}50%{opacity:1}}
+.shop-collection{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:9px;margin:12px 0 4px;max-width:330px;font-size:12px;color:#c9c1da}
+.shop-collection b{color:#fff}
+.shop-collection i{height:7px;border-radius:99px;background:#232640;overflow:hidden;display:block}
+.shop-collection u{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#5fe0cf,#a885ff);text-decoration:none}
+.shop-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:6px 0 14px}
+.shop-chips{display:flex;flex-wrap:wrap;gap:7px}
+.shop-chip{border:1px solid #3a3f58;background:#151827;color:#c7cadb;border-radius:99px;padding:7px 13px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.shop-chip:hover{border-color:#8972ba;color:#fff}
+.shop-chip.active{background:#3a2a22;border-color:#ffa45c;color:#ffd9b8;font-weight:700}
+.shop-sort{display:flex;align-items:center;gap:8px;font-size:12px;color:#aeb2c6}
+.shop-sort select{background:#11131d;color:#f4f0ff;border:1px solid #373849;border-radius:8px;padding:7px 9px;font-size:12px}
+.shop-empty{grid-column:1/-1;text-align:center;color:#b5b8c9}
+.cat-shop-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.shop-art{position:relative;height:150px;margin:-4px -4px 10px;border-radius:12px;background:radial-gradient(ellipse at 50% 38%,#2c3050,#151826 72%);border:1px solid #2c3147;overflow:hidden;display:grid;place-items:center}
+.shop-art-svg{width:100%;height:100%;display:block;overflow:hidden}
+.shop-worn-badge{position:absolute;left:8px;top:8px;background:#1d3a33;border:1px solid #2a6956;color:#8be8c3;border-radius:99px;padding:3px 9px;font-size:10px;font-weight:700}
+.shop-item-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.shop-item-meta .cat-slot-chip{margin:0}
+.rarity-chip{display:inline-flex;border-radius:99px;padding:4px 8px;font-size:10px;font-weight:700;border:1px solid transparent}
+.rarity-chip.rarity-common{color:#cfd3e2;background:#262a3c;border-color:#3a3f58}
+.rarity-chip.rarity-rare{color:#9fd7ff;background:#14283a;border-color:#2c5a82}
+.rarity-chip.rarity-epic{color:#d8b8ff;background:#2a1c42;border-color:#6a46a8}
+.rarity-chip.rarity-legend{color:#ffd58a;background:#3a2a12;border-color:#a8742a}
+.cat-shop-item.rarity-rare{border-color:#2f5878}.cat-shop-item.rarity-epic{border-color:#5d3f95}.cat-shop-item.rarity-legend{border-color:#a8742a;box-shadow:0 0 0 1px #a8742a33,0 10px 28px #a8742a1f}
+.shop-need{display:block;color:#ff9aa6;font-size:11px;font-weight:400;margin-top:3px}
+.cat-shop-item h3{margin:2px 0 6px}
+.cat-shop-item.equipped{outline:2px solid #5fe0cf55}
+/* Lonca ekranı: aksesuarlar kedinin üzerinde */
+.rpg-cat{min-height:300px;align-content:start;padding-top:12px}
+.rpg-cat .cat-stage{width:210px;height:230px;margin:0 auto 6px}
+.rpg-cat .cat-stage .cat-growth-model{width:var(--growth-size,100%)}
+.rpg-cat .cat-stage .cat-companion-base,.rpg-cat .cat-stage .cat-growth-model img{height:100%;width:100%;max-width:none;animation:none}
+.rpg-gear{grid-template-columns:72px 1fr!important;min-width:230px!important}
+.rpg-gear>.rpg-gear-art{display:block;width:72px;height:60px;border-radius:9px;background:#151826;overflow:hidden;font-size:0;grid-row:1/3}
+.rpg-gear-art .shop-art-svg{width:100%;height:100%}
+@media(max-width:700px){.shop-sort{width:100%}.cat-shop-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}
+.rpg-cat{padding-bottom:34px}
+.rpg-cat small{position:absolute;left:0;right:0;bottom:10px;text-align:center;z-index:6;text-shadow:0 1px 6px #000}
+.rpg-cat .cat-stage{height:224px;margin-bottom:0}

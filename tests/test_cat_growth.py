@@ -45,7 +45,7 @@ class CatGrowthTests(unittest.TestCase):
 
     def test_real_cat_stage_is_rendered_with_equipment_inside_same_growth_layer(self):
         self.assertIn("growth?.asset||'/assets/cat-companion.png'", self.ui)
-        self.assertIn("<div class=\"cat-growth-model\">${wearLayers(equipment)}", self.ui)
+        self.assertIn("<div class=\"cat-growth-model\">${wearLayers(equipment,growth?.id)}", self.ui)
         self.assertIn("${overlays}</span></div>", self.ui)
         self.assertIn("window.CatGrowth?.forLevel(catLevel)", self.ui)
         self.assertIn("data-cat-level=\"${catLevel}\"", self.ui)

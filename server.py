@@ -24,8 +24,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from curriculum import CURRICULUM
+from sandbox import normalize_output, run_limited
 from concept_checker import check_cpp_concept
 from visual_labs import LABS, simulate as simulate_visual_lab, public_result as public_lab_result
+from lesson_scenes import scenes_for as lesson_scenes_for
+from workshop_projects import extend_projects, TEMPLATES as WORKSPACE_TEMPLATES
 from devtools import initial_state as initial_devtool_state, apply as apply_devtool_action
 from learning_engine import learning_insights
 from project_workshop import validate_files as validate_project_files, build_project as build_project_workspace, resolve_cmake
@@ -42,9 +45,70 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 COMPILER = shutil.which("g++") or shutil.which("clang++")
 DB_LOCK = threading.Lock()
 MAX_SOURCE = 20_000
+ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 OPENAI_MODEL = os.environ.get("CPP_ADVENTURE_OPENAI_MODEL", "gpt-6-astra")
 OLLAMA_URL = os.environ.get("CPP_ADVENTURE_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_MODEL = os.environ.get("CPP_ADVENTURE_OLLAMA_MODEL", "qwen2.5-coder:3b")
+# Claude: the small, inexpensive Haiku model is enough for short tutoring hints.
+CLAUDE_MODEL = os.environ.get("CPP_ADVENTURE_CLAUDE_MODEL", "claude-haiku-5-5")
+CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50)}  # USD per million input/output tokens (prompts up to 100k tokens)
+# The key lives outside the project and outside the database, so it is never exported, committed or sent to the page.
+SECRETS_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".config")) / "CppAdventure" / "secrets"
+CLAUDE_KEY_FILE = SECRETS_DIR / "anthropic_api_key"
+TUTOR_SYSTEM = "You are a patient C++ tutor inside a cat-themed learning app. Reply in the requested language. Diagnose the learner's actual mistake, explain the cause, then give one progressive hint. Do not provide the complete solution unless the learner explicitly asks for a detailed explanation. Keep it under 160 words."
+
+
+# Free online tutor: Groq's free plan needs no card and returns HTTP 429 instead of charging when its limits are hit.
+GROQ_MODEL = os.environ.get("CPP_ADVENTURE_GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_FALLBACK_MODEL = os.environ.get("CPP_ADVENTURE_GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
+API_KEYS = {
+    "claude": {"env": "ANTHROPIC_API_KEY", "file": "anthropic_api_key", "pattern": r"sk-ant-[A-Za-z0-9_\-]{20,300}", "error": "Bu bir Claude API anahtarına benzemiyor (sk-ant- ile başlamalı)."},
+    "groq": {"env": "GROQ_API_KEY", "file": "groq_api_key", "pattern": r"gsk_[A-Za-z0-9]{20,200}", "error": "Bu bir Groq API anahtarına benzemiyor (gsk_ ile başlamalı)."},
+}
+
+
+def provider_key(provider):
+    spec = API_KEYS[provider]
+    key = os.environ.get(spec["env"], "").strip()
+    if key:
+        return key
+    try:
+        return (SECRETS_DIR / spec["file"]).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def provider_key_from_env(provider):
+    return bool(os.environ.get(API_KEYS[provider]["env"], "").strip())
+
+
+def save_provider_key(provider, key):
+    spec, key = API_KEYS[provider], (key or "").strip()
+    path = SECRETS_DIR / spec["file"]
+    if not key:
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        return
+    if not re.fullmatch(spec["pattern"], key):
+        raise ValueError(spec["error"])
+    SECRETS_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(key, encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
+def claude_api_key():
+    return provider_key("claude")
+
+
+def save_claude_api_key(key):
+    save_provider_key("claude", key)
+
+
 APP_VERSION = "0.4.0"
 
 
@@ -67,19 +131,27 @@ SHOP = {
     "yarn": {"cost": 250, "icon": "🧶", "slot": "toy", "name": {"tr": "Balıkçı kedinin yumağı", "ru": "Клубок кота-рыбака"}, "description": {"tr": "Pati altında taşınan yumuşak oyuncak.", "ru": "Мягкая игрушка у лапки."}},
     "scarf": {"cost": 450, "icon": "🧣", "slot": "neck", "name": {"tr": "Kışlık pati atkısı", "ru": "Зимний шарфик"}, "description": {"tr": "Soğuk kodlama gecelerine sıcaklık.", "ru": "Согревает в холодные ночи кода."}},
     "wizard": {"cost": 700, "icon": "🧙", "slot": "head", "name": {"tr": "Bilge büyücü şapkası", "ru": "Шляпа мудрого волшебника"}, "description": {"tr": "Yeni konuları sihirle çöz.", "ru": "Решай новые темы с помощью магии."}},
+    "shades": {"cost": 800, "icon": "🕶️", "slot": "face", "name": {"tr": "Piksel güneş gözlüğü", "ru": "Пиксельные солнечные очки"}, "description": {"tr": "Parlak ekranlara karşı kod modu.", "ru": "Режим кода против яркого экрана."}},
     "moon": {"cost": 950, "icon": "🌙", "slot": "back", "name": {"tr": "Ay ışığı pelerini", "ru": "Лунный плащ"}, "description": {"tr": "Gece vardiyasının parıltılı pelerini.", "ru": "Сияющий плащ ночной смены."}},
+    "bowtie": {"cost": 1000, "icon": "🤵", "slot": "neck", "name": {"tr": "Kod papyonu", "ru": "Бабочка программиста"}, "description": {"tr": "Sunum günlerinin şık dokunuşu.", "ru": "Элегантный штрих для дней презентаций."}},
     "bow": {"cost": 1200, "icon": "🎀", "slot": "head", "name": {"tr": "Pembe pati fiyonk", "ru": "Розовый бантик лапки"}, "description": {"tr": "Kedinin kulakları arasına takılır.", "ru": "Украшает ушки кота."}},
+    "mug": {"cost": 1400, "icon": "☕", "slot": "toy", "name": {"tr": "Kod kupası", "ru": "Кружка для кода"}, "description": {"tr": "Uzun debug gecelerinin sıcak dostu.", "ru": "Тёплый друг долгих ночей отладки."}},
     "headset": {"cost": 1550, "icon": "🎧", "slot": "ears", "name": {"tr": "Neon oyun kulaklığı", "ru": "Неоновые игровые наушники"}, "description": {"tr": "Odaklanma modu: mırlama açık.", "ru": "Режим фокуса: мурчание включено."}},
     "raincoat": {"cost": 1900, "icon": "🧥", "slot": "body", "name": {"tr": "Kod yağmurluğu", "ru": "Плащ программиста"}, "description": {"tr": "Hataları üzerinden kaydırıp atar.", "ru": "Ошибки скатываются, как капли."}},
+    "cape": {"cost": 2100, "icon": "🦸", "slot": "back", "name": {"tr": "Kahraman pelerini", "ru": "Плащ героя"}, "description": {"tr": "Her derlemeyi kahramanca karşıla.", "ru": "Встречай каждую сборку как герой."}},
     "fish": {"cost": 2300, "icon": "🐟", "slot": "toy", "name": {"tr": "Altın balık oyuncağı", "ru": "Золотая рыбка-игрушка"}, "description": {"tr": "Boss savaşlarından kalan ganimet.", "ru": "Трофей после битвы с боссом."}},
+    "wings": {"cost": 2600, "icon": "👼", "slot": "back", "name": {"tr": "Melek kanatları", "ru": "Ангельские крылья"}, "description": {"tr": "Hatasız derlemelerin hafif kanatları.", "ru": "Лёгкие крылья безошибочных сборок."}},
     "backpack": {"cost": 2800, "icon": "🎒", "slot": "back", "name": {"tr": "Gezgin kedi sırt çantası", "ru": "Рюкзак кота-путешественника"}, "description": {"tr": "Bütün macera notları yanında.", "ru": "Все заметки о приключениях рядом."}},
-    "crown": {"cost": 3400, "icon": "👑", "slot": "head", "name": {"tr": "C++ kralı tacı", "ru": "Корона короля C++"}, "description": {"tr": "Efsane seviyeye yakışan ödül.", "ru": "Награда для настоящей легенды."}},
+    "aura": {"cost": 3000, "icon": "✨", "slot": "aura", "name": {"tr": "Yıldız tozu aurası", "ru": "Аура звёздной пыли"}, "description": {"tr": "Seni bir seviye parlak gösterir.", "ru": "Делает тебя ярче на целый уровень."}},
+    "crown": {"cost": 3400, "icon": "👑", "slot": "head", "name": {"tr": "C++ kralı tacı", "ru": "Корона короля C++"}, "description": {"tr": "Efsane seviyeye yakışan ödül.", "ru": "Награда для настоящей легенды."}}
 }
+PROFILE_AVATARS = ("🐱","🐈","😺","😸","😼","🐈‍⬛","🦊","🐯","🐻","🐼","c:buddy","c:prof","c:teach","c:hack","c:debug","c:wiz","c:boss")
 PROJECTS = [
     {"id":"cat_greeting","xp":70,"title":{"tr":"Kedi selamlama botu","ru":"Кот-бот приветствия"},"description":{"tr":"Bir isim oku ve kişiye özel kedi selamı yazdır.","ru":"Прочитай имя и выведи персональное кошачье приветствие."},"starter":"#include <iostream>\n#include <string>\nint main() {\n    std::string ad;\n    std::cin >> ad;\n    // selamla\n    return 0;\n}","requires":["std::string","std::cin","std::cout"],"tests":[{"input":"Luna","expected":"Merhaba, Luna!"},{"input":"Mavi","expected":"Merhaba, Mavi!"}]},
     {"id":"score_tracker","xp":100,"title":{"tr":"Pati puan takipçisi","ru":"Счётчик очков лапки"},"description":{"tr":"Üç görev puanını oku ve toplamı hesapla. Negatif ve sıfır değerleri de dene.","ru":"Прочитай три результата и вычисли сумму. Проверь отрицательные и нулевые значения."},"starter":"#include <iostream>\nint main() {\n    int a, b, c;\n    std::cin >> a >> b >> c;\n    // toplamı yazdır\n    return 0;\n}","requires":["std::cin","std::cout","+"],"tests":[{"input":"3 4 5","expected":"12"},{"input":"-2 2 0","expected":"0"},{"input":"7 7 7","expected":"21"}]},
     {"id":"algorithm_sort","xp":140,"title":{"tr":"Balık pazarını sırala","ru":"Сортировка рыбного рынка"},"description":{"tr":"N sayısını ve ardından N tam sayı oku; sayıları küçükten büyüğe sırala. Big O düşün: std::sort O(N log N) çalışır.","ru":"Прочитай N и затем N целых чисел; отсортируй их по возрастанию. Подумай о Big O: std::sort работает за O(N log N)."},"starter":"#include <iostream>\n#include <vector>\n#include <algorithm>\nint main() {\n    int n; std::cin >> n;\n    std::vector<int> v(n);\n    for (int& x : v) std::cin >> x;\n    // sırala ve yazdır\n    return 0;\n}","requires":["std::sort","vector","std::cout"],"tests":[{"input":"5 4 1 3 2 0","expected":"0 1 2 3 4 "},{"input":"1 -7","expected":"-7 "},{"input":"0","expected":""}]},
 ]
+extend_projects(PROJECTS)
 
 
 @contextmanager
@@ -177,6 +249,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS devtools_state(profile_id TEXT NOT NULL, module TEXT NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,module), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS study_sessions(profile_id TEXT NOT NULL, session_id TEXT NOT NULL, day TEXT NOT NULL, seconds INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,session_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS arena_attempts(profile_id TEXT NOT NULL, day TEXT NOT NULL, challenge_id TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, best_score INTEGER NOT NULL DEFAULT 0, best_elapsed_ms INTEGER NOT NULL DEFAULT 0, awarded_xp INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,day,challenge_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
+        CREATE TABLE IF NOT EXISTS admin_bonus(profile_id TEXT PRIMARY KEY, level_xp INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS plugin_settings(profile_id TEXT NOT NULL, plugin_id TEXT NOT NULL, version TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,plugin_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
         """)
         columns = {row[1] for row in con.execute("PRAGMA table_info(profiles)")}
@@ -314,6 +387,78 @@ def equip_companion_item(con, profile_id, item_id, slot=None):
     return None
 
 
+def base_level_xp(con, profile_id):
+    """XP that counts toward the companion level: tasks, daily quests and workshop projects."""
+    done = {row[0] for row in con.execute("SELECT task_id FROM completions WHERE profile_id=?", (profile_id,))}
+    earned = sum(t["xp"] for t in all_tasks() if t["id"] in done)
+    earned += con.execute("SELECT COALESCE(SUM(reward),0) FROM daily_quests WHERE profile_id=? AND completed=1", (profile_id,)).fetchone()[0]
+    done_projects = {row[0] for row in con.execute("SELECT project_id FROM project_submissions WHERE profile_id=? AND awarded=1", (profile_id,))}
+    return earned + sum(project["xp"] for project in PROJECTS if project["id"] in done_projects)
+
+
+def admin_level_bonus(con, profile_id):
+    row = con.execute("SELECT level_xp FROM admin_bonus WHERE profile_id=?", (profile_id,)).fetchone()
+    return int(row[0]) if row else 0
+
+
+def xp_for_level(level):
+    """Total level XP needed to reach `level` (level n costs n*120)."""
+    return 60 * level * (level - 1)
+
+
+ADMIN_ENABLED = os.environ.get("CPP_ADVENTURE_ADMIN", "1") != "0"
+ADMIN_BADGES = ("first_steps","cat_coder","quest_hunter","legend","project_builder","first_boss","bug_squasher","quiz_whiz","code_runner","chapter_clear","world_explorer","boss_hunter","streak_keeper","daily_star","shop_lover","stylish_cat","algorithmist")
+
+
+def _admin_int(value, low, high):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("Geçerli bir sayı gir.")
+    if number < low or number > high:
+        raise ValueError(f"Değer {low} ile {high} arasında olmalı.")
+    return number
+
+
+def admin_action(con, profile_id, action, value=None):
+    """Test-panel actions. Only the active local profile is changed."""
+    if action == "add_xp":
+        amount = _admin_int(value, -10_000_000, 10_000_000)
+        con.execute("UPDATE profiles SET xp=MAX(0,xp+?) WHERE id=?", (amount, profile_id))
+    elif action == "set_xp":
+        con.execute("UPDATE profiles SET xp=? WHERE id=?", (_admin_int(value, 0, 10_000_000), profile_id))
+    elif action == "set_level":
+        level = _admin_int(value, 1, 60)
+        bonus = xp_for_level(level) - base_level_xp(con, profile_id)
+        con.execute("INSERT INTO admin_bonus(profile_id,level_xp) VALUES(?,?) ON CONFLICT(profile_id) DO UPDATE SET level_xp=excluded.level_xp", (profile_id, bonus))
+    elif action == "set_streak":
+        streak = _admin_int(value, 0, 3650)
+        con.execute("UPDATE profiles SET streak=?,last_day=? WHERE id=?", (streak, time.strftime("%Y-%m-%d") if streak else "", profile_id))
+    elif action == "grant_items":
+        con.executemany("INSERT OR IGNORE INTO shop_items(profile_id,item_id) VALUES(?,?)", [(profile_id, item_id) for item_id in SHOP])
+    elif action == "clear_items":
+        con.execute("DELETE FROM companion_equipment WHERE profile_id=?", (profile_id,))
+        con.execute("DELETE FROM companion_loadouts WHERE profile_id=?", (profile_id,))
+        con.execute("DELETE FROM shop_items WHERE profile_id=?", (profile_id,))
+        con.execute("UPDATE profiles SET active_item='' WHERE id=?", (profile_id,))
+    elif action in ("complete_chapter", "complete_all"):
+        if action == "complete_chapter":
+            chapters = [CURRICULUM[_admin_int(value, 0, len(CURRICULUM) - 1)]]
+        else:
+            chapters = CURRICULUM
+        con.executemany("INSERT OR IGNORE INTO completions(profile_id,task_id,xp) VALUES(?,?,?)", [(profile_id, task["id"], task["xp"]) for chapter in chapters for task in chapter["tasks"]])
+    elif action == "grant_badges":
+        con.executemany("INSERT OR IGNORE INTO achievements(profile_id,id) VALUES(?,?)", [(profile_id, badge) for badge in ADMIN_BADGES])
+    elif action == "reset_progress":
+        for table in ("completions", "quiz_results", "review_schedule", "daily_quests", "learning_events", "achievements", "admin_bonus", "project_submissions", "lab_awards"):
+            con.execute(f"DELETE FROM {table} WHERE profile_id=?", (profile_id,))
+        con.execute("UPDATE profiles SET xp=0,streak=0,last_day='' WHERE id=?", (profile_id,))
+    else:
+        raise ValueError("Bilinmeyen test paneli işlemi.")
+    if action not in ("reset_progress", "grant_badges"):
+        sync_achievements(con, profile_id)
+
+
 def state(profile_id):
     with db() as con:
         row = valid_profile(con, profile_id)
@@ -324,11 +469,8 @@ def state(profile_id):
         achievements = {row[0] for row in con.execute("SELECT id FROM achievements WHERE profile_id=?", (profile_id,))}
         profile.pop("pin_hash", None)
     tasks = all_tasks()
-    earned = sum(t["xp"] for t in tasks if t["id"] in done)
     with db() as con:
-        earned += con.execute("SELECT COALESCE(SUM(reward),0) FROM daily_quests WHERE profile_id=? AND completed=1", (profile_id,)).fetchone()[0]
-        done_projects = {row[0] for row in con.execute("SELECT project_id FROM project_submissions WHERE profile_id=? AND awarded=1", (profile_id,))}
-        earned += sum(project["xp"] for project in PROJECTS if project["id"] in done_projects)
+        earned = max(0, base_level_xp(con, profile_id) + admin_level_bonus(con, profile_id))
     lvl = 1
     while earned >= lvl * 120:
         earned -= lvl * 120
@@ -376,6 +518,17 @@ def state(profile_id):
     return {"profile": profile, "curriculum": CURRICULUM}
 
 
+
+_ANSWER_TRANSLATION = str.maketrans({"ç": "c", "ş": "s", "ğ": "g", "ı": "i", "ö": "o", "ü": "u", "İ": "i", "Ç": "c", "Ş": "s", "Ğ": "g", "Ö": "o", "Ü": "u"})
+
+
+def normalize_answer(value) -> str:
+    """Forgiving quiz comparison: case, Turkish diacritics, spacing, `std::` and end punctuation."""
+    text = str(value if value is not None else "").translate(_ANSWER_TRANSLATION).casefold().strip()
+    text = re.sub(r"\s+", " ", text).rstrip(".!;")
+    return text[5:] if text.startswith("std::") else text
+
+
 def compile_and_run(source: str, input_text: str = ""):
     if not COMPILER:
         return {"ok": False, "phase": "compiler_missing", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": 0, "error": "G++/Clang++ bulunamadı. MSYS2 UCRT64 G++ kurulumu gerekli."}
@@ -393,7 +546,7 @@ def compile_and_run(source: str, input_text: str = ""):
         src.write_text(source, encoding="utf-8")
         compile_started = time.perf_counter()
         try:
-            build = subprocess.run([COMPILER, "-std=c++20", "-O0", "-pipe", str(src), "-o", str(exe)], capture_output=True, text=True, timeout=15, cwd=temp, encoding="utf-8", errors="replace", creationflags=creationflags)
+            build = subprocess.run([COMPILER, "-std=c++20", "-O0", "-Wall", "-Wextra", "-pipe", str(src), "-o", str(exe)], capture_output=True, text=True, timeout=15, cwd=temp, encoding="utf-8", errors="replace", creationflags=creationflags)
         except subprocess.TimeoutExpired:
             elapsed = round((time.perf_counter() - started) * 1000)
             return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": round((time.perf_counter() - compile_started) * 1000), "run_ms": None, "elapsed_ms": elapsed, "error": "Derleme 15 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
@@ -402,12 +555,13 @@ def compile_and_run(source: str, input_text: str = ""):
             compiler_output = (build.stderr or build.stdout)[-6000:] or "Derleme başarısız."
             return {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": compiler_output, "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": compiler_output}
         run_started = time.perf_counter()
-        try:
-            run = subprocess.run([str(exe)], input=input_text, capture_output=True, text=True, timeout=3, cwd=temp, encoding="utf-8", errors="replace", creationflags=creationflags)
-        except subprocess.TimeoutExpired:
+        run, timed_out, overflowed = run_limited([str(exe)], input_text, 3, temp, creationflags)
+        if timed_out and not overflowed:
             run_ms = round((time.perf_counter() - run_started) * 1000)
             return {"ok": False, "phase": "run_timeout", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "Program 3 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
         run_ms = round((time.perf_counter() - run_started) * 1000)
+        if overflowed:
+            return {"ok": False, "phase": "output_limit", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": run.stdout[-6000:], "output": run.stdout[-6000:], "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "Program çok fazla çıktı üretti (64 KB sınırı); güvenli biçimde durduruldu."}
         stdout = run.stdout[-6000:]
         stderr = run.stderr[-3000:]
         return {"ok": run.returncode == 0, "phase": "complete" if run.returncode == 0 else "runtime", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": stdout, "output": stdout, "stderr": stderr, "exit_code": run.returncode, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "" if run.returncode == 0 else f"Program {run.returncode} çıkış koduyla sonlandı."}
@@ -426,8 +580,8 @@ def diagnose_locally(task, source, input_text="", language="tr"):
             error = result.get("error") or result.get("stderr") or "Program başarısız çıktı koduyla kapandı."
             match = re.search(r"main\.cpp:(\d+):\d+: (?:fatal )?error: ([^\n]+)", error)
             return {"kind": "compile" if result.get("error") else "runtime", "test": index, "line": int(match.group(1)) if match else None, "detail": error[-2400:], "message": "Derleyici kodu bu satırda okuyamadı. Noktalı virgül, parantez ve değişken adlarını kontrol et." if result.get("error") else "Program derlendi, ancak çalışırken hata verdi. Değerlerin hangi durumda kullanıldığını kontrol et.", "message_ru": "Компилятор не смог прочитать код. Проверь точку с запятой, скобки и имена переменных." if result.get("error") else "Код скомпилировался, но завершился с ошибкой. Проверь, при каких условиях используются значения."}
-        expected = str(case.get("expected", task.get("expected", ""))).strip()
-        actual = str(result.get("output", "")).strip()
+        expected = normalize_output(case.get("expected", task.get("expected", "")))
+        actual = normalize_output(result.get("output", ""))
         if actual != expected:
             return {"kind": "output", "test": index, "input": case.get("input", ""), "expected": expected, "actual": actual, "message": "Program çalışıyor; bu sınamada ürettiği değer beklenenden farklı. İşlem sırasını, koşul sınırını ve yazdırdığın değişkeni izle.", "message_ru": "Программа запускается, но результат этого теста отличается от ожидаемого. Проверь порядок операций, границы условия и выводимую переменную."}
     if task.get("concept_rule"):
@@ -497,6 +651,35 @@ def call_ai_provider(provider, prompt):
             data = json.loads(response.read())
         usage = data.get("usage", {})
         return {"text": _response_text(data), "model": OPENAI_MODEL, "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
+    if provider == "groq":
+        key = provider_key("groq")
+        if not key:
+            return {"error": "Groq API anahtarı ayarlı değil.", "unconfigured": True}
+        for model in dict.fromkeys([GROQ_MODEL, GROQ_FALLBACK_MODEL]):
+            payload = {"model": model, "temperature": 0.3, "max_completion_tokens": 900, "reasoning_effort": "low", "include_reasoning": False, "messages": [{"role": "system", "content": TUTOR_SYSTEM}, {"role": "user", "content": prompt}]}
+            request = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions", data=json.dumps(payload).encode(), headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    data = json.loads(response.read())
+            except urllib.error.HTTPError as exc:
+                if exc.code == 429:
+                    continue  # limits are per model, so the smaller model may still have quota
+                raise
+            usage = data.get("usage", {})
+            text = ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+            return {"text": text, "model": data.get("model", model), "input_tokens": usage.get("prompt_tokens", 0), "output_tokens": usage.get("completion_tokens", 0)}
+        return {"error": "Groq ücretsiz kullanım sınırı doldu; biraz sonra tekrar dene. Bu sırada çevrimdışı ipucu gösteriliyor."}
+    if provider == "claude":
+        key = claude_api_key()
+        if not key:
+            return {"error": "Claude API anahtarı ayarlı değil.", "unconfigured": True}
+        payload = {"model": CLAUDE_MODEL, "max_tokens": 450, "temperature": 0.3, "system": TUTOR_SYSTEM, "messages": [{"role": "user", "content": prompt}]}
+        request = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(payload).encode(), headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}, method="POST")
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.loads(response.read())
+        text = "".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
+        usage = data.get("usage", {})
+        return {"text": text, "model": data.get("model", CLAUDE_MODEL), "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
     if provider == "ollama":
         payload = {"model": OLLAMA_MODEL, "stream": False, "messages": [{"role": "system", "content": "You are a patient C++ tutor. Reply in the requested language. Explain the real error, then offer one progressive hint. Do not give the full solution unless asked."}, {"role": "user", "content": prompt}], "options": {"temperature": 0.25}}
         request = urllib.request.Request(OLLAMA_URL + "/api/chat", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
@@ -529,10 +712,36 @@ class Handler(SimpleHTTPRequestHandler):
             raise ValueError("İstek çok büyük.")
         return json.loads(self.rfile.read(size) or b"{}")
 
+    def _request_allowed(self, mutating=False):
+        """Reject DNS-rebinding and cross-site requests to the local API."""
+        host = (self.headers.get("Host") or "").strip()
+        hostname = urlparse("//" + host).hostname if host else None
+        if hostname not in ALLOWED_HOSTS:
+            return False
+        if self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site":
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            parsed = urlparse(origin)
+            if parsed.hostname not in ALLOWED_HOSTS or parsed.netloc.lower() != host.lower():
+                return False
+        elif mutating and self.headers.get("Sec-Fetch-Site", "").lower() not in ("", "same-origin", "none"):
+            return False
+        if mutating and not (self.headers.get("Content-Type", "").lower().startswith("application/json")):
+            return False
+        return True
+
+    def do_HEAD(self):
+        if not self._request_allowed(False):
+            return self.send_json({"error": "İstek reddedildi."}, 403)
+        return super().do_HEAD()
+
     def do_GET(self):
+        if not self._request_allowed(False):
+            return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
         if path == "/api/meta":
-            return self.send_json({"app_version": APP_VERSION, "database_ready": DB_PATH.exists(), "compiler_ready": bool(COMPILER)})
+            return self.send_json({"app_version": APP_VERSION, "database_ready": DB_PATH.exists(), "compiler_ready": bool(COMPILER), "admin": ADMIN_ENABLED})
         if path == "/api/health":
             compiler_version = ""
             if COMPILER:
@@ -560,7 +769,7 @@ class Handler(SimpleHTTPRequestHandler):
                 with urllib.request.urlopen(request, timeout=1.5) as response:
                     ollama_models = [item.get("name", "") for item in json.loads(response.read()).get("models", [])]
             except Exception: pass
-            return self.send_json({"provider": selected, "openai_configured": bool(os.environ.get("OPENAI_API_KEY", "").strip()), "openai_model": OPENAI_MODEL, "ollama_url": OLLAMA_URL, "ollama_models": ollama_models, "ollama_model": OLLAMA_MODEL, "usage": usage})
+            return self.send_json({"provider": selected, "openai_configured": bool(os.environ.get("OPENAI_API_KEY", "").strip()), "openai_model": OPENAI_MODEL, "ollama_url": OLLAMA_URL, "ollama_models": ollama_models, "ollama_model": OLLAMA_MODEL, "claude_configured": bool(claude_api_key()), "claude_key_from_env": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()), "claude_key_hint": ("…" + claude_api_key()[-4:]) if claude_api_key() else "", "claude_model": CLAUDE_MODEL, "groq_configured": bool(provider_key("groq")), "groq_key_from_env": provider_key_from_env("groq"), "groq_key_hint": ("…" + provider_key("groq")[-4:]) if provider_key("groq") else "", "groq_model": GROQ_MODEL, "usage": usage})
         if path == "/api/shop":
             return self.send_json({"items": SHOP})
         if path == "/api/projects":
@@ -572,7 +781,7 @@ class Handler(SimpleHTTPRequestHandler):
                 workspaces = [dict(row) for row in con.execute("SELECT workspace_id,name,files_json,updated_at FROM project_workspaces WHERE profile_id=? ORDER BY updated_at DESC", (profile_id,))]
             for workspace in workspaces:
                 workspace["files"] = json.loads(workspace.pop("files_json"))
-            return self.send_json({"projects": PROJECTS, "saves": saves, "workspaces": workspaces, "cmake_available": bool(resolve_cmake())})
+            return self.send_json({"projects": PROJECTS, "saves": saves, "workspaces": workspaces, "cmake_available": bool(resolve_cmake()), "templates": [{"id": t["id"], "name": t["name"], "files": sorted(t["files"])} for t in WORKSPACE_TEMPLATES]})
         if path == "/api/career":
             params = __import__("urllib.parse", fromlist=["parse_qs"]).parse_qs(urlparse(self.path).query)
             profile_id = params.get("profile_id", [""])[0]
@@ -627,6 +836,11 @@ class Handler(SimpleHTTPRequestHandler):
                 payload = companion_payload(con, profile_id)
             if not payload: return self.send_json({"error": "Profil bulunamadı. / Профиль не найден."}, 404)
             return self.send_json(payload)
+        if path == "/api/lesson-scenes":
+            params = __import__("urllib.parse", fromlist=["parse_qs"]).parse_qs(urlparse(self.path).query)
+            chapter_id, language = params.get("chapter", [""])[0], params.get("lang", ["tr"])[0]
+            if not any(chapter["id"] == chapter_id for chapter in CURRICULUM): return self.send_json({"error": "Bölüm bulunamadı. / Глава не найдена."}, 404)
+            return self.send_json({"scenes": lesson_scenes_for(chapter_id, language)})
         if path == "/api/labs":
             params = __import__("urllib.parse", fromlist=["parse_qs"]).parse_qs(urlparse(self.path).query)
             profile_id = params.get("profile_id", [""])[0]
@@ -782,6 +996,8 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception: return False
 
     def do_POST(self):
+        if not self._request_allowed(True):
+            return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
         try:
             body = self.read_json(MAX_PLUGIN_BYTES + 2048 if path == "/api/plugins/install" else 30_000)
@@ -796,7 +1012,7 @@ class Handler(SimpleHTTPRequestHandler):
                 cases = []
                 for index, case in enumerate(challenge["tests"], 1):
                     run = compile_and_run(source, case["input"])
-                    passed = bool(run.get("ok")) and run.get("stdout", run.get("output", "")).strip() == case["expected"].strip()
+                    passed = bool(run.get("ok")) and normalize_output(run.get("stdout", run.get("output", ""))) == normalize_output(case["expected"])
                     cases.append({"name": f"Test {index}", "passed": passed, "phase": run.get("phase"), "error": run.get("error", "")[:300]})
                     if not run.get("compile_ok"):
                         cases.extend({"name": f"Test {later}", "passed": False, "phase": "compile", "error": ""} for later in range(index + 1, len(challenge["tests"]) + 1))
@@ -861,7 +1077,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(result, 200 if result.get("ok") else 400)
             if path == "/api/profiles":
                 name = str(body.get("name", "")).strip()[:24]
-                avatar = str(body.get("avatar", "🐱"))[:8]
+                avatar = str(body.get("avatar", "🐱"))
+                if avatar not in PROFILE_AVATARS: avatar = "🐱"
                 pin = str(body.get("pin", ""))
                 lang = body.get("lang") if body.get("lang") in ("tr", "ru") else "tr"
                 if not name or len(name) < 2: return self.send_json({"error": "Имя должно содержать не менее 2 символов." if lang == "ru" else "İsim en az 2 karakter olmalı."}, 400)
@@ -880,10 +1097,13 @@ class Handler(SimpleHTTPRequestHandler):
                 avatar = body.get("avatar")
                 pin = str(body.get("pin", ""))
                 with db() as con:
-                    if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
+                    current = valid_profile(con, profile_id)
+                    if not current: return self.send_json({"error": "Profil bulunamadı."}, 404)
+                    if not self.verify_profile_pin(current, body.get("current_pin", "")): return self.send_json({"error": "Mevcut PIN hatalı. / Текущий PIN неверен.", "pin_required": True}, 403)
+                    if name and len(name) < 2: return self.send_json({"error": "İsim en az 2 karakter olmalı. / Имя должно содержать не менее 2 символов."}, 400)
                     if name:
                         con.execute("UPDATE profiles SET name=? WHERE id=?", (name, profile_id))
-                    if avatar in ("🐱","🐈","😺","😸","😼","🐈‍⬛","🦊","🐯","🐻","🐼"):
+                    if avatar in PROFILE_AVATARS:
                         con.execute("UPDATE profiles SET avatar=? WHERE id=?", (avatar, profile_id))
                     if pin == "":
                         pass
@@ -1062,9 +1282,9 @@ class Handler(SimpleHTTPRequestHandler):
                     if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
                     if body.get("lang") in ("tr", "ru"):
                         con.execute("UPDATE profiles SET lang=? WHERE id=?", (body["lang"], profile_id))
-                    if body.get("ai_provider") in ("offline", "ollama", "openai", "off"):
+                    if body.get("ai_provider") in ("offline", "ollama", "openai", "claude", "groq", "off"):
                         con.execute("UPDATE profiles SET ai_provider=? WHERE id=?", (body["ai_provider"], profile_id))
-                    if body.get("avatar") in ("🐱","🐈","😺","😸","😼","🐈‍⬛","🦊","🐯","🐻","🐼"):
+                    if body.get("avatar") in PROFILE_AVATARS:
                         con.execute("UPDATE profiles SET avatar=? WHERE id=?", (body["avatar"], profile_id))
                 return self.send_json({"ok": True})
             if path == "/api/companion/equip":
@@ -1130,6 +1350,36 @@ class Handler(SimpleHTTPRequestHandler):
                     if not deleted: return self.send_json({"error": "Kombinasyon bulunamadı. / Комплект не найден."}, 404)
                     result = companion_payload(con, profile_id)
                 return self.send_json({"ok": True, "companion": result})
+            if path in ("/api/ai/key", "/api/ai/claude-key"):
+                profile_id = body.get("profile_id")
+                provider = "claude" if path == "/api/ai/claude-key" else str(body.get("provider", ""))
+                if provider not in API_KEYS: return self.send_json({"error": "Bilinmeyen AI servisi."}, 400)
+                with db() as con:
+                    if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
+                try:
+                    save_provider_key(provider, str(body.get("key", "")))
+                except ValueError as exc:
+                    return self.send_json({"error": str(exc)}, 400)
+                configured = bool(provider_key(provider))
+                with db() as con:
+                    if configured and body.get("key"):
+                        con.execute("UPDATE profiles SET ai_provider=? WHERE id=?", (provider, profile_id))
+                    elif not configured:
+                        # Removing the key returns the tutor to offline hints instead of failing on every request.
+                        con.execute("UPDATE profiles SET ai_provider='offline' WHERE id=? AND ai_provider=?", (profile_id, provider))
+                hint = ("…" + provider_key(provider)[-4:]) if configured else ""
+                return self.send_json({"ok": True, "provider": provider, "configured": configured, "key_hint": hint, f"{provider}_configured": configured, f"{provider}_key_hint": hint})
+            if path == "/api/admin":
+                if not ADMIN_ENABLED:
+                    return self.send_json({"error": "Test paneli kapalı."}, 403)
+                profile_id = body.get("profile_id")
+                with DB_LOCK, db() as con:
+                    if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
+                    try:
+                        admin_action(con, profile_id, str(body.get("action", "")), body.get("value"))
+                    except ValueError as exc:
+                        return self.send_json({"error": str(exc)}, 400)
+                return self.send_json({"ok": True, **state(profile_id)})
             if path == "/api/rpg/equip":
                 profile_id, item_id = body.get("profile_id"), str(body.get("item_id", ""))
                 with db() as con:
@@ -1198,6 +1448,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if not name: return self.send_json({"error":"Proje adı boş olamaz. / Название проекта не может быть пустым."},400)
                 workspace_id = str(uuid.uuid4())
                 files = {"main.cpp": "#include <iostream>\n#include \"message.hpp\"\n\nint main() {\n    std::cout << make_message();\n    return 0;\n}\n", "include/message.hpp": "#pragma once\n#include <string>\nstd::string make_message();\n", "src/message.cpp": "#include \"message.hpp\"\nstd::string make_message() { return \"Hello, C++ Adventure!\\n\"; }\n"}
+                template = next((t for t in WORKSPACE_TEMPLATES if t["id"] == body.get("template")), None)
+                if template: files = dict(template["files"])
                 with db() as con:
                     if not valid_profile(con, profile_id): return self.send_json({"error":"Profil bulunamadı."},404)
                     if con.execute("SELECT COUNT(*) FROM project_workspaces WHERE profile_id=?",(profile_id,)).fetchone()[0] >= 8: return self.send_json({"error":"En fazla 8 çalışma alanı oluşturulabilir. / Можно создать не более 8 проектов."},400)
@@ -1264,7 +1516,7 @@ class Handler(SimpleHTTPRequestHandler):
                     correct=bool(answer.strip())
                     for test_index,case in enumerate(question["tests"],1):
                         result=compile_and_run(answer,case["input"])
-                        passed=bool(result.get("ok") and result.get("output","").strip()==case["expected"].strip())
+                        passed=bool(result.get("ok") and normalize_output(result.get("output",""))==normalize_output(case["expected"]))
                         checks.append({"name":f"Test {test_index}","passed":passed,"output":result.get("output",""),"error":result.get("error","")})
                         correct=correct and passed
                 answer_record={"question_id":question["id"],"topic":question["topic"],"kind":question["kind"],"correct":bool(correct)}
@@ -1298,7 +1550,7 @@ class Handler(SimpleHTTPRequestHandler):
                 checks=[]
                 for idx,case in enumerate(project["tests"],1):
                     result=compile_and_run(code,case["input"])
-                    passed=result["ok"] and result.get("output","").strip()==case["expected"].strip()
+                    passed=result["ok"] and normalize_output(result.get("output",""))==normalize_output(case["expected"])
                     checks.append({"name":f"Test {idx}","passed":passed,"expected":case["expected"],"actual":result.get("output","").strip(),"error":result.get("error","")})
                     if not passed: break
                 passed=not missing and len(checks)==len(project["tests"]) and all(c["passed"] for c in checks)
@@ -1330,8 +1582,8 @@ class Handler(SimpleHTTPRequestHandler):
                     language = profile["lang"]
                 try: result = simulate_visual_lab(lab_id, body.get("values", {}), language)
                 except ValueError: return self.send_json({"error": "Laboratuvar bulunamadı."}, 404)
-                answer = str(body.get("answer", "")).strip().casefold()
-                if not answer or answer != str(result["answer_key"]).strip().casefold():
+                answer = normalize_answer(body.get("answer", ""))
+                if not answer or answer != normalize_answer(result["answer_key"]):
                     message = "Sonucu yeniden incele ve adımları tek tek ilerlet." if language == "tr" else "Проверь результат и пройди шаги по одному."
                     return self.send_json({"correct": False, "hint": message})
                 lab = next(x for x in LABS if x["id"] == lab_id)
@@ -1360,7 +1612,7 @@ class Handler(SimpleHTTPRequestHandler):
                     state_data = apply_devtool_action(module, state_data, "save", {"code": code, "input": stdin, "expected": expected}, COMPILER)
                     result = compile_and_run(code, stdin)
                     result["expected"] = expected
-                    result["tests_passed"] = bool(result.get("ok") and result.get("output", "").strip() == expected.strip())
+                    result["tests_passed"] = bool(result.get("ok") and normalize_output(result.get("output", "")) == normalize_output(expected))
                     state_data["runs"] = int(state_data.get("runs", 0)) + 1
                     if result["tests_passed"]: state_data["passed"] = int(state_data.get("passed", 0)) + 1
                     state_data["last"] = "C++ test passed." if result["tests_passed"] else "C++ test failed. Compare expected output and compiler/run details."
@@ -1404,7 +1656,7 @@ class Handler(SimpleHTTPRequestHandler):
                     run = compile_and_run(source, input_text)
                     elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
                     variants.append({"run": run, "elapsed_ms": elapsed_ms, "characters": len(source), "lines": len(source.splitlines()), "quality": analyze_code_quality(source, language)})
-                matched = all(item["run"].get("ok") for item in variants) and variants[0]["run"].get("output", "").strip() == variants[1]["run"].get("output", "").strip()
+                matched = all(item["run"].get("ok") for item in variants) and normalize_output(variants[0]["run"].get("output", "")) == normalize_output(variants[1]["run"].get("output", ""))
                 return self.send_json({"equivalent_output": matched, "variants": variants, "timing_note": "Compilation and one run are timed together; timings vary by machine and are not a complexity proof."})
             if path == "/api/ai/diagnose":
                 profile_id, task_id, source = body.get("profile_id"), body.get("task_id"), body.get("code", "")
@@ -1419,7 +1671,7 @@ class Handler(SimpleHTTPRequestHandler):
                 local = diagnose_locally(task, source, body.get("input", ""), language)
                 if provider in ("offline", "off"):
                     return self.send_json({"ok": True, "provider": provider, "diagnostic": local, "text": local["message" if language == "tr" else "message_ru"]})
-                if provider == "openai" and body.get("consent") is not True:
+                if provider in ("openai", "claude", "groq") and body.get("consent") is not True:
                     return self.send_json({"error": "Kodun çevrimiçi AI servisine gönderilmesi için onay gerekiyor.", "consent_required": True}, 403)
                 course = next((chapter for chapter in CURRICULUM if any(item["id"] == task_id for item in chapter["tasks"])), {})
                 prompt = json.dumps({"language": language, "topic": course.get("title", {}).get(language, "C++"), "lesson": course.get("lesson", {}).get(language, ""), "task": task.get("prompt", {}).get(language, ""), "concept_criteria": task.get("concept_criteria", {}).get(language, ""), "expected_output": task.get("expected", ""), "learner_code": source[:MAX_SOURCE], "program_input": body.get("input", "")[:2000], "compiler_and_test_diagnosis": local, "recent_quiz_history": recent}, ensure_ascii=False)
@@ -1430,6 +1682,8 @@ class Handler(SimpleHTTPRequestHandler):
                     in_tokens, out_tokens = int(answer.get("input_tokens", 0)), int(answer.get("output_tokens", 0))
                     in_rate = float(os.environ.get("CPP_ADVENTURE_INPUT_USD_PER_MILLION", "0"))
                     out_rate = float(os.environ.get("CPP_ADVENTURE_OUTPUT_USD_PER_MILLION", "0"))
+                    if provider == "claude" and not (in_rate or out_rate):
+                        in_rate, out_rate = CLAUDE_PRICES.get(str(answer.get("model") or CLAUDE_MODEL), (0, 0))
                     estimate = in_tokens * in_rate / 1_000_000 + out_tokens * out_rate / 1_000_000
                     with db() as con:
                         con.execute("INSERT INTO ai_usage(profile_id,provider,model,input_tokens,output_tokens,requests,estimated_usd) VALUES(?,?,?,?,?,1,?) ON CONFLICT(profile_id,provider,model) DO UPDATE SET input_tokens=input_tokens+excluded.input_tokens,output_tokens=output_tokens+excluded.output_tokens,requests=requests+1,estimated_usd=estimated_usd+excluded.estimated_usd,updated_at=CURRENT_TIMESTAMP", (profile_id, provider, answer.get("model", ""), in_tokens, out_tokens, estimate))
@@ -1475,7 +1729,7 @@ class Handler(SimpleHTTPRequestHandler):
                     checks = []
                     for idx, case in enumerate(task.get("tests", [{"input": task.get("input", ""), "expected": task["expected"]}]), 1):
                         result = compile_and_run(answer, case.get("input", ""))
-                        passed = result["ok"] and result.get("output", "").strip() == case["expected"].strip()
+                        passed = result["ok"] and normalize_output(result.get("output", "")) == normalize_output(case["expected"])
                         checks.append({"name": f"Test {idx}", "passed": passed, "expected": case["expected"], "actual": result.get("output", "").strip(), "error": result.get("error", "")})
                         if not passed:
                             result["checks"] = checks
@@ -1494,7 +1748,7 @@ class Handler(SimpleHTTPRequestHandler):
                     feedback = {"checks": checks, "concept": concept}
                 else:
                     answer_key = task["answer"].get("tr" if (state(profile_id).get("profile",{}).get("lang","tr")=="tr") else "ru", "tr") if isinstance(task["answer"],dict) else task["answer"]
-                    correct = str(answer).strip().casefold() == str(answer_key).strip().casefold()
+                    correct = normalize_answer(answer) == normalize_answer(answer_key)
                     feedback = None
                 if not correct:
                     record_learning_event(profile_id, task_id, False, "wrong_answer", body.get("hint_used"))

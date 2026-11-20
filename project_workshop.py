@@ -10,6 +10,8 @@ import tempfile
 import time
 from pathlib import Path, PurePosixPath
 
+from sandbox import run_limited
+
 
 MAX_FILES = 24
 MAX_FILE_CHARS = 20_000
@@ -115,8 +117,9 @@ def build_project(files: dict[str, str], input_text: str = "", mode: str = "g++"
             if built.returncode:
                 message = (built.stdout + built.stderr)[-6000:]
                 return {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": message, "error": message, "elapsed_ms": round((time.perf_counter()-started)*1000)}
-        try:
-            run = subprocess.run(command if mode == "cmake" else [str(exe)], input=input_text, capture_output=True, text=True, timeout=3, cwd=cwd, encoding="utf-8", errors="replace", creationflags=no_window)
-        except subprocess.TimeoutExpired:
+        run, timed_out, overflowed = run_limited(command if mode == "cmake" else [str(exe)], input_text, 3, cwd, no_window)
+        if overflowed:
+            return {"ok": False, "phase": "output_limit", "compile_ok": True, "compile_output": "", "stdout": run.stdout[-6000:], "stderr": "", "exit_code": None, "elapsed_ms": round((time.perf_counter()-started)*1000), "error": "Program çok fazla çıktı üretti (64 KB sınırı). / Программа вывела слишком много данных (лимит 64 КБ)."}
+        if timed_out:
             return {"ok": False, "phase": "run_timeout", "compile_ok": True, "compile_output": "", "stdout": "", "stderr": "", "exit_code": None, "elapsed_ms": round((time.perf_counter()-started)*1000), "error": "Program 3 saniyede tamamlanmadı. / Программа превысила лимит 3 секунды."}
         return {"ok": run.returncode == 0, "phase": "complete" if run.returncode == 0 else "runtime", "compile_ok": True, "compile_output": "", "stdout": run.stdout[-6000:], "stderr": run.stderr[-3000:], "exit_code": run.returncode, "elapsed_ms": round((time.perf_counter()-started)*1000), "error": "" if run.returncode == 0 else f"Program {run.returncode} koduyla kapandı. / Программа завершилась с кодом {run.returncode}."}
