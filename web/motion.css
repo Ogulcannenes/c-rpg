@@ -269,9 +269,9 @@ body:has(.admin-panel.open) .badge-pop{right:min(420px,96vw)}
 .task-example{margin:12px 0 4px;padding:10px 12px 8px;border:1px solid #34304a;border-radius:10px;background:#141726}
 .task-example-title{display:block;margin-bottom:7px;font:700 11.5px 'DM Sans',sans-serif;color:#c9a8ff}
 .task-example-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:8px}
-.task-example-grid small{display:block;margin-bottom:4px;font-size:10.5px;color:#9095a7}
+.task-example-grid small{display:block;margin-bottom:4px;font-size:12px;color:#9095a7}
 .task-example-grid pre{margin:0;padding:8px 10px;min-height:34px;border-radius:7px;background:#0c0f16;border:1px solid #272b38;color:#b4e6d7;font:12px/1.5 'JetBrains Mono',Consolas,monospace;white-space:pre-wrap;word-break:break-word}
-.task-example-grid pre i{color:#6f7594;font-style:normal}
+.task-example-grid pre i{color:var(--ds-text-subtle);font-style:normal}
 .task-example p{margin:7px 0 0;font-size:11px;color:#8e94b0}
 @media(max-width:520px){.task-example-grid{grid-template-columns:1fr}}
 .quest-prompt code.inline-code{padding:1px 6px;border-radius:5px;background:#231f36;border:1px solid #3a3358;color:#e3d4ff;font:12px 'JetBrains Mono',Consolas,monospace;white-space:pre-wrap}

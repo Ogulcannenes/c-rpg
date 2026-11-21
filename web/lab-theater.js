@@ -5,7 +5,7 @@
 // kod satırından belleğe uçan değerler, bellek şeridinde yerini alan değişkenler, pointer okları,
 // dereference ışığı, yer değiştiren çubuklar, çağrı yığını, koşul çatalı ve daha fazlası.
 (() => {
-  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('reduce-motion'));
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const escHtml = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const T = (tr, ru) => { try { return lang === 'ru' ? ru : tr; } catch (_) { return tr; } };

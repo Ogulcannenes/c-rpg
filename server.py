@@ -191,6 +191,25 @@ def db(immediate=False):
         con.close()
 
 
+def internal_error_payload(exc):
+    """Log an unexpected error with its traceback and return a message without internals."""
+    import traceback
+    incident = secrets.token_hex(4)
+    try:
+        folder = DATA_ROOT / "logs"
+        folder.mkdir(parents=True, exist_ok=True)
+        log = folder / "server-errors.log"
+        if log.exists() and log.stat().st_size > 1_000_000:  # keep one previous file, ~2 MB at most
+            log.replace(folder / "server-errors.1.log")
+        with log.open("a", encoding="utf-8") as handle:
+            handle.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} [{incident}] {exc!r}\n{traceback.format_exc()}\n")
+    except OSError:
+        pass
+    return {"error": f"Beklenmeyen bir hata oluştu (kod {incident}). Ayrıntı yerel günlüğe yazıldı. / "
+                     f"Непредвиденная ошибка (код {incident}). Подробности записаны в локальный журнал.",
+            "error_code": "internal_error", "incident": incident}
+
+
 def migrate_legacy_database(source_path, target_path=None):
     """Copy existing profile data into the desktop app's data folder without replacing progress."""
     source = Path(str(source_path).strip()).expanduser()
@@ -271,6 +290,12 @@ PUBLIC_TASK_FIELDS = ("id", "kind", "xp", "title", "prompt", "starter", "require
 EXAMPLE_TASK_KINDS = {"code", "fix", "boss"}
 
 
+def example_test_index(task):
+    """The one test case the page shows as a worked example (same choice as public_task)."""
+    tests = task.get("tests") or []
+    return next((i for i, case in enumerate(tests) if str(case.get("expected", "")).strip()), 0)
+
+
 def public_task(task):
     view = {key: task[key] for key in PUBLIC_TASK_FIELDS if key in task}
     if task.get("kind") == "predict":
@@ -280,7 +305,7 @@ def public_task(task):
         view["hint_count"] = max(len(items) for items in task["hints"].values())
     tests = task.get("tests") or []
     if task.get("kind") in EXAMPLE_TASK_KINDS and tests:
-        example = next((case for case in tests if str(case.get("expected", "")).strip()), tests[0])
+        example = tests[example_test_index(task)]
         view["tests"] = [{"input": example.get("input", ""), "expected": example.get("expected", "")}]
         view["test_count"] = len(tests)
     return view
@@ -714,7 +739,9 @@ def diagnose_locally(task, source, input_text="", language="tr"):
         expected = normalize_output(case.get("expected", task.get("expected", "")))
         actual = normalize_output(result.get("output", ""))
         if actual != expected:
-            return {"kind": "output", "test": index, "input": case.get("input", ""), "expected": expected, "actual": actual, "message": "Program çalışıyor; bu sınamada ürettiği değer beklenenden farklı. İşlem sırasını, koşul sınırını ve yazdırdığın değişkeni izle.", "message_ru": "Программа запускается, но результат этого теста отличается от ожидаемого. Проверь порядок операций, границы условия и выводимую переменную."}
+            visible = not task.get("tests") or index - 1 == example_test_index(task)
+            reveal = {"input": case.get("input", ""), "expected": expected} if visible else {"hidden": True}
+            return {"kind": "output", "test": index, **reveal, "actual": actual, "message": "Program çalışıyor; bu sınamada ürettiği değer beklenenden farklı. İşlem sırasını, koşul sınırını ve yazdırdığın değişkeni izle.", "message_ru": "Программа запускается, но результат этого теста отличается от ожидаемого. Проверь порядок операций, границы условия и выводимую переменную."}
     if task.get("concept_rule"):
         concept = check_cpp_concept(source, task["concept_rule"], language)
         if not concept["passed"]:
@@ -986,7 +1013,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return None  # client went away; nothing left to answer
         except Exception as exc:
-            return self.send_json({"error": f"Yerel sunucu hatası: {exc}"}, 500)
+            return self.send_json(internal_error_payload(exc), 500)
 
     def _route_get(self):
         if not self._request_allowed(False):
@@ -1227,6 +1254,14 @@ class Handler(SimpleHTTPRequestHandler):
         arena_attempts = saved.get("arena_attempts", [])
         plugin_settings = saved.get("plugin_settings", [])
         ai_usage_rows = saved.get("ai_usage", []) if isinstance(saved.get("ai_usage", []), list) else []  # v2+; absent in v1 saves
+        # Every list in a save is a list of objects; anything else is a malformed file (400, not 500).
+        lists = (done, badges, quiz_results, reviews, daily_quests, shop_items, saved_loadouts, project_submissions,
+                 project_workspaces, interview_sessions, portfolio_notes, learning_events, lab_awards, devtools_state,
+                 study_sessions, arena_attempts, plugin_settings, ai_usage_rows)
+        if equipped_items is not None and not isinstance(equipped_items, dict):
+            return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
+        if not all(isinstance(items, list) and all(isinstance(item, dict) for item in items) for items in lists):
+            return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
         if len(done) > len(allowed) or any(item.get("task_id") not in allowed for item in done):
             return self.send_json({"error": "Yedekte geçersiz görev kaydı var."}, 400)
         with db() as con:
@@ -1235,6 +1270,10 @@ class Handler(SimpleHTTPRequestHandler):
             # Import replaces the whole profile, so a PIN-protected profile must be unlocked.
             if not self.verify_profile_pin(target, body.get("pin", "")):
                 return self.send_json({"error": "PIN hatalı. / Неверный PIN.", "pin_required": True}, 403)
+            try:
+                safety_copy = backup_database(DB_PATH, DATA_ROOT / "backups", "before-import")
+            except (OSError, sqlite3.Error):
+                return self.send_json({"error": "Geri yüklemeden önce yedek alınamadı; hiçbir şey değiştirilmedi. / Не удалось сделать резервную копию перед восстановлением; ничего не изменено."}, 500)
             last_day = str(saved.get("last_day", ""))
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", last_day): last_day = ""
             con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (clamp_int(saved.get("xp"), 0, MAX_IMPORTED_XP), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", clamp_int(saved.get("streak"), 0, 3650), last_day, ai_tutor.normalize_provider(saved.get("ai_provider")), profile_id))
@@ -1934,7 +1973,8 @@ class Handler(SimpleHTTPRequestHandler):
             for idx, case in enumerate(task.get("tests", [{"input": task.get("input", ""), "expected": task["expected"]}]), 1):
                 result = compile_and_run(answer, case.get("input", ""))
                 passed = result["ok"] and normalize_output(result.get("output", "")) == normalize_output(case["expected"])
-                checks.append({"name": f"Test {idx}", "passed": passed, "expected": case["expected"], "actual": result.get("output", "").strip(), "error": result.get("error", "")})
+                shown = idx - 1 == example_test_index(task) if task.get("tests") else True
+                checks.append({"name": f"Test {idx}", "passed": passed, **({"expected": case["expected"]} if shown else {"hidden": True}), "actual": result.get("output", "").strip(), "error": result.get("error", "")})
                 if not passed:
                     result["checks"] = checks
                     error_kind = "compile" if result.get("error") else "runtime" if result.get("exit_code") not in (None, 0) else "output"
@@ -2285,7 +2325,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError) as exc:
             return self.send_json({"error": str(exc)}, 400)
         except Exception as exc:
-            return self.send_json({"error": f"Yerel sunucu hatası: {exc}"}, 500)
+            return self.send_json(internal_error_payload(exc), 500)
 
 
 

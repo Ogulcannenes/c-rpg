@@ -21,7 +21,9 @@ class _ServerCase(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         cls.old_db = server.DB_PATH
+        cls._saved_paths = (server.DB_PATH, server.DATA_ROOT)  # backups/logs must not land in the repo
         server.DB_PATH = Path(cls.temp.name) / "phase2.db"
+        server.DATA_ROOT = Path(cls.temp.name)
         server.init_db()
         if cls.app_server:
             cls.http, cls.auth, cls.start_url = server.create_app_server(0)
@@ -32,6 +34,7 @@ class _ServerCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        server.DB_PATH, server.DATA_ROOT = cls._saved_paths
         cls.http.shutdown()
         cls.http.server_close()
         server.DB_PATH = cls.old_db

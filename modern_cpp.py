@@ -17,7 +17,7 @@ TITLES = {
     "fix": ("Kedi Hatasını Düzelt", "Исправь ошибку кота"),
     "warm": ("Isınma Görevi", "Разминка"),
     "practice": ("Pratik Görevi", "Практическое задание"),
-    "boss": ("Boss Challenge", "Битва с боссом"),
+    "boss": ("Bölüm Boss'u", "Битва с боссом"),
 }
 XP = {"quiz": 15, "predict": 20, "quiz2": 15, "predict2": 20, "fix": 30, "warm": 35, "practice": 45, "boss": 80}
 # Headers the prediction snippets need; tests wrap each snippet in a full program with these.

@@ -7,7 +7,7 @@
   const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const currentLang = () => { try { return lang === 'ru' ? 'ru' : 'tr'; } catch (_) { return 'tr'; } };
   const T = (tr, ru) => currentLang() === 'ru' ? ru : tr;
-  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('reduce-motion'));
   const cache = new Map();
   const players = new Set();
 

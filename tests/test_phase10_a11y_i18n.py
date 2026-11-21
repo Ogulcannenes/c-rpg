@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 CYRILLIC = re.compile(r"[А-Яа-яЁё]")
 # Turkish-slot strings that are deliberately Russian: the language switch shows the target language.
-ALLOWED_RUSSIAN_IN_TR = {"modules.ui.tr.app.languageRussian"}
+# languageToggleLabel names the target language in its own script so the accessible name contains the
+# visible button text "Русский" (WCAG 2.5.3).
+ALLOWED_RUSSIAN_IN_TR = {"modules.ui.tr.app.languageRussian", "tr.languageToggleLabel"}
 
 
 def leaves(node, path=""):
@@ -87,8 +89,8 @@ class AccessibilityTests(unittest.TestCase):
     def test_active_navigation_item_is_announced_as_current_page(self):
         app = (WEB / "app.js").read_text(encoding="utf-8")
         self.assertIn("b.setAttribute('aria-current','page')", app)
-        self.assertIn("!document.querySelector('[aria-modal=\"true\"],#onboard-overlay'))renderProfiles()", app,
-                      "Escape inside a dialog must not jump to the profile screen")
+        # UX audit: a global Escape handler sent learners to the profile screen even while typing code.
+        self.assertNotIn("e.key==='Escape'&&appState", app, "Escape must never navigate away from the current view")
         self.assertIn("App.trapFocus(layer.querySelector('.save-modal'),{onEscape:close})", app)
 
     def test_focus_trap_cycles_and_restores_focus(self):

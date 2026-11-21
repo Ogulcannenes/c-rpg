@@ -127,13 +127,16 @@ class StaleContentTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         cls.old = server.DB_PATH
+        cls._saved_paths = (server.DB_PATH, server.DATA_ROOT)  # backups/logs must not land in the repo
         server.DB_PATH = Path(cls.temp.name) / "arch.db"
+        server.DATA_ROOT = Path(cls.temp.name)
         server.init_db()
         cls.http = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         threading.Thread(target=cls.http.serve_forever, daemon=True).start()
 
     @classmethod
     def tearDownClass(cls):
+        server.DB_PATH, server.DATA_ROOT = cls._saved_paths
         cls.http.shutdown()
         cls.http.server_close()
         server.DB_PATH = cls.old

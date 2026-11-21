@@ -15,7 +15,10 @@ class CoreSystemTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
+        # DATA_ROOT too: migrations and imports write backups there (they used to land in the repo).
+        cls.saved_paths = server.DB_PATH, server.DATA_ROOT
         server.DB_PATH = Path(cls.temp.name) / "test.db"
+        server.DATA_ROOT = Path(cls.temp.name)
         server.init_db()
         cls.http = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         cls.thread = threading.Thread(target=cls.http.serve_forever, daemon=True)
@@ -26,6 +29,7 @@ class CoreSystemTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.http.shutdown()
         cls.http.server_close()
+        server.DB_PATH, server.DATA_ROOT = cls.saved_paths
         cls.temp.cleanup()
 
     def request(self, method, path, data=None):

@@ -115,14 +115,15 @@ def backup_database(source: Path, backup_dir: Path, label: str) -> Path:
     while target.exists():
         counter += 1
         target = backup_dir / f"adventure-{label}-{stamp}-{counter}.db"
-    src = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    src = sqlite3.connect(Path(source).resolve().as_uri() + "?mode=ro", uri=True)  # as_uri: safe for %, # and ? in paths
     dst = sqlite3.connect(target)
     try:
         src.backup(dst)
+        dst.execute("PRAGMA journal_mode=DELETE")  # a backup is one self-contained file, no -wal/-shm
     finally:
         dst.close()
         src.close()
-    check = sqlite3.connect(f"file:{target}?mode=ro", uri=True)
+    check = sqlite3.connect(target.resolve().as_uri() + "?mode=ro", uri=True)
     try:
         if check.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
             raise sqlite3.DatabaseError(f"backup {target} failed integrity_check")

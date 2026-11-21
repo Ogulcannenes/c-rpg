@@ -8,7 +8,7 @@
 .adm-body{overflow-y:auto;padding:14px 18px 24px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
 .adm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .adm-stats div{background:#191c2b;border:1px solid #2a2f45;border-radius:11px;padding:8px 9px}
-.adm-stats span{display:block;font-size:10.5px;color:#9ea3ba}
+.adm-stats span{display:block;font-size:12px;color:#9ea3ba}
 .adm-stats b{display:block;font-size:17px;margin-top:2px;font-variant-numeric:tabular-nums}
 .adm-group{border:1px solid #262a3c;border-radius:13px;padding:12px;background:#121522}
 .adm-group h3{font-size:13px;margin:0 0 9px;color:#fff}

@@ -452,3 +452,37 @@ list changed several times in 2026, so it was not added as a second provider.
   multi-file missions; splitting `server.py` into services. Also not done yet: compiling and
   testing the Inno installer (needs ISCC), code signing (needs a certificate), a real Groq request
   (needs the user's free key) and a screen-reader pass.
+
+## UI/UX + accessibility + technical audit (2026-11-21)
+
+Full report with scores, measurements and before/after screenshots: `docs/UX_AUDIT.md`.
+
+- Method: real running app (throwaway DB) at 980/1440/1920 px, all 15 sections plus lesson,
+  quiz, code, boss, settings and profiles; in-page measurement scripts. Four independent read-only
+  reviewers (UI Designer, UX Architect, Accessibility Auditor, Code Reviewer), checked by Reality
+  Checker, which also re-scored each fix round. The app has no colour-theme system, so "15 themes"
+  was scored as cohesion of the 15 sidebar sections.
+- Scores: visual 71.8 → 76.2 → 78.4, technical 68 → 73 → 77, total 69.5 → 74.3 → 77.6.
+  Seven of nine visual criteria are still 76–79, so the phase is **not** marked successful.
+  Round 3 (profile picker focus/title, editor 14px, inline greys, career empty states) was not
+  re-scored independently.
+- Main fixes:
+  - Wrong "previous boss" lock note.
+  - Global Escape → profiles.
+  - Empty lesson card.
+  - Sticky Run/Submit.
+  - No text under 11px; off-token greys and opacity fading replaced with tokens (0 measurable AA failures).
+  - setView focus/title/scroll, including settings and profiles.
+  - Text size 100–150% with Ctrl+Plus/Minus/0, and a reduce-motion switch honoured by all JS modules.
+  - Monaco ariaLabel ×5; toast ≥4 s.
+  - Narrower but non-wrapping sidebar at ≤1100px; 4×2 task tabs.
+  - Remaining English labels translated.
+  - Server:
+    - hidden-test input/expected no longer revealed;
+    - import backs up first and validates all lists;
+    - 500s are logged, generic message plus incident id;
+    - single-file backups with as_uri paths.
+  - Tests isolate DATA_ROOT.
+- Deliberately not done: backup pruning (owner's rule: never delete backups); the 78 stale files
+  in the repo's git-ignored backups/ folder were left in place.
+- Tests: new tests/test_ux_audit_fixes.py (8); suite 301 OK after rounds 1 and 2.

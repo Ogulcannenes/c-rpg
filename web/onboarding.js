@@ -7,7 +7,7 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const lg = () => { try { return lang === 'ru' ? 'ru' : 'tr'; } catch (_) { return 'tr'; } };
   const T = (tr, ru) => lg() === 'ru' ? ru : tr;
-  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('reduce-motion'));
 
   const CHARS = [
     {id: 'c:buddy', img: 'cat-companion.png', color: '#ffa45c', name: ['Pati', 'Пати'], role: ['Neşeli yol arkadaşı', 'Весёлый спутник'], line: ['Miyav! İlk programını birlikte yazalım mı?', 'Мяу! Напишем первую программу вместе?'], stats: [4, 4, 3]},
@@ -243,6 +243,9 @@
     $$('.view').forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
     $('#crumb-current').textContent = T('Profiller', 'Профили');
+    document.title = `${T('Profiller', 'Профили')} · C++ Adventure`;
+    $$('.nav-item[aria-current]').forEach(item => { item.removeAttribute('aria-current'); item.classList.remove('active'); });
+    window.scrollTo(0, 0);
     await loadProfiles();
     document.body.classList.toggle('no-profile', !profileId || !profiles.some(p => p.id === profileId));
     if (!profiles.length) { view.innerHTML = ''; if (!wiz) openWizard(); return; }
@@ -261,6 +264,7 @@
       }).join('')}
       <button type="button" class="who-card who-new" id="create-profile"><span class="who-plus">＋</span><b>${esc(T('Yeni oyuncu', 'Новый игрок'))}</b><small>${esc(T('Karakterini seç', 'Выбери персонажа'))}</small></button></div>
       <section class="panel who-board"><h3>🏆 ${esc(T('Yerel liderlik tablosu', 'Локальная таблица лидеров'))}</h3>${list.length > 1 ? `<ol>${list.map((u, i) => `<li class="${u.id === profileId ? 'me' : ''}"><span class="who-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>${window.avatarHtml(u.avatar, 'avatar-inline')}<b>${esc(u.name)}</b><span class="quest-xp">${u.xp} XP</span></li>`).join('')}</ol>` : `<p class="view-lead">${esc(T('Bu bilgisayarda başka oyuncu yok. Birlikte öğrendiğin biri varsa onun için de profil açın ve XP yarışı başlasın!', 'На этом компьютере других игроков нет. Создайте профиль для друга — и начнётся гонка за XP!'))}</p>`}</section>`;
+    requestAnimationFrame(() => { const h = view.querySelector('.who-head h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } });
     $$('.who-open', view).forEach(b => b.onclick = () => selectProfile(b.dataset.pid));
     $$('.who-edit', view).forEach(b => b.onclick = () => openWizard(profiles.find(p => p.id === b.dataset.pid)));
     $$('.who-delete', view).forEach(b => b.onclick = () => confirmDelete(profiles.find(p => p.id === b.dataset.pid)));

@@ -14,7 +14,9 @@ class AdminPanelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
+        cls._saved_paths = (server.DB_PATH, server.DATA_ROOT)  # backups/logs must not land in the repo
         server.DB_PATH = Path(cls.temp.name) / "admin.db"
+        server.DATA_ROOT = Path(cls.temp.name)
         # The panel is opt-in (CPP_ADVENTURE_ADMIN=1); these tests exercise it explicitly.
         cls.old_admin = server.ADMIN_ENABLED
         server.ADMIN_ENABLED = True
@@ -26,6 +28,7 @@ class AdminPanelTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        server.DB_PATH, server.DATA_ROOT = cls._saved_paths
         cls.http.shutdown()
         cls.http.server_close()
         server.ADMIN_ENABLED = cls.old_admin

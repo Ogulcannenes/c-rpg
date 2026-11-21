@@ -60,7 +60,7 @@
   // drags glide with inertia, cards can be dragged too, and buttons/keys animate smoothly.
   function setupWorldMap(){
     const viewport=$('#world-map-viewport'),canvas=$('#world-map-canvas'),label=$('#world-zoom-label');if(!viewport||!canvas)return;
-    const W=1500,H=900,reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const W=1500,H=900,reduce=(window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('reduce-motion'));
     let cover=1,scale=1,tx=0,ty=0,drag=null,moved=false,velocity={x:0,y:0},glide=0;
     const measure=()=>{cover=Math.max(viewport.clientWidth/W,viewport.clientHeight/H)};
     const clamp=()=>{scale=Math.max(cover,Math.min(cover*3,scale));tx=Math.min(0,Math.max(viewport.clientWidth-W*scale,tx));ty=Math.min(0,Math.max(viewport.clientHeight-H*scale,ty))};

@@ -18,7 +18,7 @@
 .cat-shop-item{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .cat-shop-item:hover{transform:translateY(-4px);border-color:#8972ba;box-shadow:0 12px 32px #05040b55}
 .cat-shop-item.previewing{border-color:#a98aff;box-shadow:0 0 0 1px #a98aff55,0 8px 28px #5b42a633}
-.cat-slot-chip{display:inline-flex;border:1px solid #454052;border-radius:99px;padding:4px 8px;color:#c6b5ec;font-size:10px;margin:0 0 6px}
+.cat-slot-chip{display:inline-flex;border:1px solid #454052;border-radius:99px;padding:4px 8px;color:#c6b5ec;font-size:12px;margin:0 0 6px}
 .cat-owned-label{color:#72ddb0!important;font-weight:700}
 .cat-item-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto;padding-top:8px}
 .cat-item-actions button{font-size:11px;padding:7px 8px}
@@ -31,7 +31,7 @@
 .cat-loadout{display:flex;align-items:center;gap:8px;padding:10px 12px}
 .cat-loadout>div{flex:1;min-width:0}
 .cat-loadout small{display:block;color:#aeb0bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
-.cat-loadout button{font-size:10px;padding:7px 9px}
+.cat-loadout button{font-size:12px;padding:7px 9px}
 .quiet-button{background:transparent;border:1px solid #484253;color:#c8bbde;border-radius:8px}
 @media(prefers-reduced-motion:reduce){.cat-growth-model>.cat-companion-base,.cat-shop-item,.cat-wearable{animation:none;transition:none}}
 .cat-levelup-overlay{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:24px;background:#090811d9;backdrop-filter:blur(7px);animation:cat-levelup-in .22s ease-out}
@@ -62,10 +62,10 @@
 .cat-shop-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
 .shop-art{position:relative;height:150px;margin:-4px -4px 10px;border-radius:12px;background:radial-gradient(ellipse at 50% 38%,#2c3050,#151826 72%);border:1px solid #2c3147;overflow:hidden;display:grid;place-items:center}
 .shop-art-svg{width:100%;height:100%;display:block;overflow:hidden}
-.shop-worn-badge{position:absolute;left:8px;top:8px;background:#1d3a33;border:1px solid #2a6956;color:#8be8c3;border-radius:99px;padding:3px 9px;font-size:10px;font-weight:700}
+.shop-worn-badge{position:absolute;left:8px;top:8px;background:#1d3a33;border:1px solid #2a6956;color:#8be8c3;border-radius:99px;padding:3px 9px;font-size:12px;font-weight:700}
 .shop-item-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 .shop-item-meta .cat-slot-chip{margin:0}
-.rarity-chip{display:inline-flex;border-radius:99px;padding:4px 8px;font-size:10px;font-weight:700;border:1px solid transparent}
+.rarity-chip{display:inline-flex;border-radius:99px;padding:4px 8px;font-size:12px;font-weight:700;border:1px solid transparent}
 .rarity-chip.rarity-common{color:#cfd3e2;background:#262a3c;border-color:#3a3f58}
 .rarity-chip.rarity-rare{color:#9fd7ff;background:#14283a;border-color:#2c5a82}
 .rarity-chip.rarity-epic{color:#d8b8ff;background:#2a1c42;border-color:#6a46a8}

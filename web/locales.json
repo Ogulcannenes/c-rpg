@@ -10,7 +10,7 @@
     "streak": "günlük seri",
     "local": "Tamamen yerel · İnternet gerekmez",
     "private": "İlerlemen bu bilgisayarda saklanır",
-    "madeWith": "🐾 ve C++ ile yapıldı",
+    "madeWith": "Sevgi, kediler ve C++ ile yapıldı",
     "saveLoad": "Kayıt / Yedekleme",
     "statsNav": "İstatistikler",
     "devtoolsNav": "Geliştirici araçları",
@@ -55,7 +55,7 @@
       "predict": "Çıktı tahmini",
       "fix": "Hata düzeltme",
       "code": "Kod görevi",
-      "boss": "Boss Challenge"
+      "boss": "Bölüm Boss'u"
     },
     "hint": "İpucu",
     "hint1": "İlk ipucu",
@@ -265,8 +265,14 @@
     "labMemoryQueue": "Queue · FIFO",
     "labLinkedList": "Linked list",
     "labDynamic": "Dynamic allocation",
-    "languageToggleLabel": "Dili değiştir",
-    "skipToContent": "İçeriğe geç"
+    "languageToggleLabel": "Русский — dili Rusçaya çevir",
+    "skipToContent": "İçeriğe geç",
+    "taskOrder": "Görevler sırayla açılır: çözdüğün görev sıradakini açar.",
+    "appearance": "Görünüm",
+    "textSize": "Yazı boyutu",
+    "textSizeHint": "Ctrl + Artı / Eksi ile de büyütüp küçültebilirsin; Ctrl + 0 varsayılana döner.",
+    "reduceMotion": "Animasyonları azalt",
+    "boss": "Bölüm Boss'u"
   },
   "ru": {
     "home": "База",
@@ -279,7 +285,7 @@
     "streak": "дней подряд",
     "local": "Полностью локально · Интернет не нужен",
     "private": "Прогресс хранится на этом компьютере",
-    "madeWith": "🐾 и C++ — с любовью",
+    "madeWith": "Сделано с любовью, котами и C++",
     "saveLoad": "Сохранение / резервная копия",
     "statsNav": "Статистика",
     "devtoolsNav": "Инструменты разработчика",
@@ -534,8 +540,14 @@
     "labMemoryQueue": "Очередь · FIFO",
     "labLinkedList": "Связный список",
     "labDynamic": "Динамическая память",
-    "languageToggleLabel": "Сменить язык",
-    "skipToContent": "Перейти к содержимому"
+    "languageToggleLabel": "Türkçe — переключить на турецкий",
+    "skipToContent": "Перейти к содержимому",
+    "taskOrder": "Задания открываются по порядку: решённое задание открывает следующее.",
+    "appearance": "Внешний вид",
+    "textSize": "Размер текста",
+    "textSizeHint": "Можно также менять размер через Ctrl + плюс / минус; Ctrl + 0 возвращает исходный.",
+    "reduceMotion": "Уменьшить анимацию",
+    "boss": "Битва с боссом"
   },
   "modules": {
     "admin": {
@@ -1510,8 +1522,8 @@
         "ru": "Загружаем ежедневное испытание…"
       },
       "arena.003": {
-        "tr": "Yerel Coding Arena",
-        "ru": "Локальная Coding Arena"
+        "tr": "Yerel Kod Arenası",
+        "ru": "Локальная кодовая арена"
       },
       "arena.004": {
         "tr": "Günlük Kod Mücadelesi",

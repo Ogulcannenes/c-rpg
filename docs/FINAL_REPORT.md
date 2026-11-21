@@ -2,7 +2,7 @@
 
 Tarih: 2026-11-21 · Dal: `modernization` (20 commit, `main` dokunulmadı, uzak depoya gönderilmedi) · Sürüm: **0.5.0**
 
-Ayrıntılı teknik kayıt: [`DEVELOPMENT_LOG.md`](../DEVELOPMENT_LOG.md). Bu rapordaki test sonuçlarının hepsi gerçek çalıştırmalardan alındı.
+Ayrıntılı teknik kayıt: [`DEVELOPMENT_LOG.md`](../DEVELOPMENT_LOG.md). Görsel UI/UX, erişilebilirlik ve teknik kalite denetimi (önce/sonra puanlar ve ekran görüntüleri): [`UX_AUDIT.md`](UX_AUDIT.md). Bu rapordaki test sonuçlarının hepsi gerçek çalıştırmalardan alındı.
 
 ## Özet
 

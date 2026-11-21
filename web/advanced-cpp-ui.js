@@ -7,7 +7,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const lg = () => { try { return lang === 'ru' ? 'ru' : 'tr'; } catch (_) { return 'tr'; } };
   const T = (tr, ru) => lg() === 'ru' ? ru : tr;
-  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('reduce-motion'));
 
   let sim = null, step = 0, timer = null, speed = 900, mutex = false, workers = 2, increments = 3, tab = 'threads';
   let asmData = null, showAll = false, codeDraft = null;

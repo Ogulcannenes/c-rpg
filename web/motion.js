@@ -2,7 +2,7 @@
 // Uygulama kodunu değiştirmeden çalışır: api(), setView(), renderSidebar() ve catReact() sarmalanır,
 // yeni çizilen öğeler (terminal çıktısı, örnek kod, harita, ipucu kutusu) MutationObserver ile yakalanır.
 (() => {
-  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.body.classList.contains('reduce-motion');
   const M = key => (window.L ? window.L(`motion.${key}`) : key);
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   let lastPointer = {x: innerWidth / 2, y: innerHeight / 2};

@@ -222,3 +222,83 @@ button.primary:hover:not(:disabled), .primary:hover:not(:disabled) { background:
   background: var(--ds-accent, #8b6cff); color: #fff; font-weight: 700; text-decoration: none; transition: top .15s; }
 .skip-link:focus { top: 12px; outline: 3px solid #fff; outline-offset: 2px; }
 #main-content:focus { outline: none; }
+
+/* ——— UX audit fixes (2026-11-21): evidence and before/after screenshots in docs/UX_AUDIT.md ——— */
+
+/* Lesson intro: the companion card stretched to the full grid height and centred its content,
+   so the first screen showed an empty card (t01). Keep it at the top and in view while reading. */
+.lesson-cat-card { align-self: start; position: sticky; top: var(--ds-space-5, 24px); justify-content: flex-start; }
+
+/* Code tasks: Run/Submit stayed below the fold at 1440×900 (t03/t04). Keep them in reach. */
+/* overflow:hidden on .editor-box made it the sticky container; clip keeps the rounded corners without that. */
+.editor-box { overflow: clip; }
+.editor-actions { position: sticky; bottom: 0; z-index: 5; padding: 10px 0 4px; margin-top: 8px;
+  background: linear-gradient(180deg, transparent, rgba(14, 16, 26, .96) 30%); }
+
+/* One eyebrow style everywhere (style.css said uppercase, ui-polish.css sentence case; home differed). */
+.eyebrow, .dash-eyebrow, .dash-card h3.dash-eyebrow {
+  text-transform: none; letter-spacing: .01em; font-size: var(--ds-text-xs); font-weight: 700; color: var(--fur, #ffbd73);
+}
+
+/* Locked content: legible text instead of opacity (2.85:1 before on achievements). */
+.achievement-card.locked :is(h3, p) { opacity: 1; color: var(--ds-text-muted); }
+.achievement-card.locked :is(small, .achievement-state, em) { opacity: 1; color: var(--ds-text-subtle); }
+.knowledge-node[class*="locked"], .knowledge-node.locked { opacity: 1; }
+
+/* Minimum window (980px): narrower sidebar leaves room for content (m02: buttons wrapped). */
+@media (max-width: 1100px) {
+  .sidebar { width: clamp(224px, 18vw, 260px); flex-basis: clamp(224px, 18vw, 260px); }
+}
+/* At high zoom the icon-only sidebar keeps the labels for screen readers (was display:none). */
+@media (max-width: 650px) {
+  .nav-item > span:not(:first-child) {
+    display: inline !important; position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
+/* Skill tree: hint that it scrolls instead of cutting nodes hard at the edge (s02). */
+.skill-tree-scroll { -webkit-mask-image: linear-gradient(90deg, #000 94%, transparent); mask-image: linear-gradient(90deg, #000 94%, transparent); }
+
+/* Shop: decorative art must not spill past the card (measured at 980px). */
+.shop-feature, .cat-stage-large, .shop-hero { overflow: hidden; }
+
+/* Task tabs: eight missions in two even rows of four instead of 7 + a lonely boss tab. */
+.task-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.task-tabs .task-tab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 980–1100px: sidebar labels and the profile line stay on one line. */
+@media (max-width: 1100px) {
+  .nav-item > span:not(:first-child), .profile-copy small, .profile-copy span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cat-save-outfit { white-space: nowrap; }
+  #cat-outfit-name { min-width: 0; }
+}
+/* Settings checkbox styled like the rest of the form. */
+.settings-check { display: flex; align-items: center; gap: 10px; margin-top: 12px; cursor: pointer; }
+.settings-check input { width: 18px; height: 18px; accent-color: var(--ds-primary, #6b4fe0); }
+
+/* Developer terminal input had outline:0 overriding the focus ring. */
+.dv-term-input:focus-within { box-shadow: 0 0 0 3px var(--ds-focus, #ffd58a); border-radius: 8px; }
+
+/* Small targets (WCAG 2.5.8). */
+.knowledge-prereq { min-height: 24px; padding: 4px 9px; }
+.nav-group-label { min-height: 28px; }
+
+/* In-app "reduce motion" (Settings), same effect as the OS preference. */
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
+}
+
+/* Headings receive focus after a view change (ux-a11y.js) only to move the reading position;
+   they are not controls, so no focus ring. */
+:where(h1, h2)[tabindex="-1"]:is(:focus, :focus-visible) { outline: none !important; box-shadow: none !important; }
+/* Narrow sidebar (980–1100px): keep the brand on one line. */
+@media (max-width: 1100px) { .brand b { white-space: nowrap; font-size: 14px; } .brand small { white-space: nowrap; letter-spacing: .02em; } }
+
+/* Second scan (counts parent opacity): faded informational text and em/rem-sized labels. */
+.knowledge-prereq { opacity: 1 !important; color: var(--ds-text-muted); }
+.knowledge-prereq.met, .knowledge-prereq.done { color: var(--ds-success, #70e0ae); }
+.career-step { opacity: 1 !important; }
+.career-step:not(.unlocked) :is(b, small, span, p, strong) { color: var(--ds-text-subtle); }
+.lt-console.empty { opacity: 1; color: var(--ds-text-subtle); }
+.lt-frame-name, .lt-type, .lt-addr, .lt-badge, .lt-ram-label, .dv-arrow, .adv-code-head,
+.adv-panel small, .dv-zone small, .dv-zone b { font-size: 11px; }

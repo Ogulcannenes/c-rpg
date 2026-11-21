@@ -113,8 +113,12 @@ CppAdventureI18n.ready.then(() => {
         self.assertIn("screenLabel", (ROOT / "web" / "splash.js").read_text(encoding="utf-8"))
 
     def test_language_switch_button_accessibility_label_is_bilingual(self):
-        self.assertEqual(self.catalog["tr"]["languageToggleLabel"], "Dili değiştir")
-        self.assertEqual(self.catalog["ru"]["languageToggleLabel"], "Сменить язык")
+        # The button shows the other language's name ("Русский" / "Türkçe"); WCAG 2.5.3 wants that
+        # visible text inside the accessible name, followed by what the button does.
+        self.assertTrue(self.catalog["tr"]["languageToggleLabel"].startswith("Русский"))
+        self.assertIn("dil", self.catalog["tr"]["languageToggleLabel"])
+        self.assertTrue(self.catalog["ru"]["languageToggleLabel"].startswith("Türkçe"))
+        self.assertIn("переключить", self.catalog["ru"]["languageToggleLabel"])
         page = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
         self.assertIn('data-i-aria="languageToggleLabel"', page)
 
