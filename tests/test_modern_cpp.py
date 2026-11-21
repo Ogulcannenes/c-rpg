@@ -99,7 +99,7 @@ std::optional<int> yasOku(const std::string& s) {
 int main() {
     std::string s; std::cin >> s;
     std::optional<int> yas = yasOku(s);
-    if (yas) std::cout << *yas + 1; else std::cout << "yok";
+    if (yas) std::cout << *yas + 1; else std::cout << "none";
 }''',
     "c22-w1": r'''#include <iostream>
 #include <optional>
@@ -154,7 +154,7 @@ int main() {
     for (int i = 0; i < q; ++i) {
         std::string k; std::cin >> k;
         auto r = deger(ayar, k);
-        std::cout << (r ? std::string(*r) : std::string("yok")) << "\n";
+        std::cout << (r ? std::string(*r) : std::string("none")) << "\n";
     }
 }''',
     "c23-03": r'''#include <iostream>

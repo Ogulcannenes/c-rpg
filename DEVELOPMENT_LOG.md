@@ -486,3 +486,14 @@ Full report with scores, measurements and before/after screenshots: `docs/UX_AUD
 - Deliberately not done: backup pruning (owner's rule: never delete backups); the 78 stale files
   in the repo's git-ignored backups/ folder were left in place.
 - Tests: new tests/test_ux_audit_fixes.py (8); suite 301 OK after rounds 1 and 2.
+
+## Task outputs in English, new README, SCORES.md (2026-11-21)
+
+- The owner asked that what a program must print in the practice tasks be English, not Turkish.
+  - 27 tasks changed their expected output, starter, prompt, hint and reference solution together, for example "Merhaba" → "Hello", "Gecti/Tekrar" → "Passed/Retry", "Miyav" → "Meow", "yok" → "none".
+  - Prompts stay Turkish/Russian. Recomputed outputs: `map` order "bee 1, bird 1, cat 2"; "Mira Star 9"; "paws8"; "cat 3".
+  - New test `EnglishTaskOutputTests`: every expected output of code/fix/boss/predict tasks is ASCII and contains no Turkish word.
+  - Workshop projects and lesson animations were not changed.
+- README rewritten from scratch as a general application README: features, requirements, MSYS2 G++ setup, setup/uninstall, data and backups, AI key, building, tests, security, troubleshooting and environment variables.
+- New `SCORES.md`: quality scores per criterion and round, technical sub-scores, measured indicators, test-suite results per phase and test counts per file.
+- Full suite: **302 tests OK**.

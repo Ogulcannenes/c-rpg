@@ -135,6 +135,29 @@ class BackupPathTests(unittest.TestCase):
                 check.close()
 
 
+class EnglishTaskOutputTests(unittest.TestCase):
+    """Owner's request: task prompts are Turkish/Russian, but what a program must print is English."""
+    TURKISH_WORDS = {"merhaba", "gecti", "kaldi", "tekrar", "miyav", "kedi", "yok", "usta", "gezgin", "cirak",
+                     "tamam", "acik", "sicak", "soguk", "ilik", "hata", "puan", "macera", "yakalandi", "negatif",
+                     "mama", "kus", "ari", "gri", "pati9"}
+
+    def test_every_expected_program_output_is_english_ascii(self):
+        problems = []
+        for task in server.content_index.TASKS:
+            if task["kind"] == "predict":
+                answer = task["answer"]
+                outputs = [answer if isinstance(answer, str) else answer.get("tr", "")]
+            elif task["kind"] in ("code", "fix", "boss"):
+                outputs = [case["expected"] for case in task.get("tests", [])]
+            else:
+                continue
+            for output in outputs:
+                words = {w.lower() for w in re.findall(r"[^\W\d_]+", output)}
+                if any(ord(ch) > 127 for ch in output) or words & self.TURKISH_WORDS:
+                    problems.append((task["id"], output))
+        self.assertEqual(problems, [])
+
+
 class FrontEndFixTests(unittest.TestCase):
     def test_no_text_smaller_than_11px_in_app_styles(self):
         # Both font-size and the font: shorthand ("font:600 10px var(--mono)").

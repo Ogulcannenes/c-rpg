@@ -11,11 +11,11 @@ from lesson_extra import CHAPTERS, predict_program
 
 # Reference solutions for the warm-up missions (never sent to the learner).
 SOLUTIONS = [
-    '#include <iostream>\nint main(){std::cout<<"Merhaba\\nKedi";}',
+    '#include <iostream>\nint main(){std::cout<<"Hello\\nCat";}',
     '#include <iostream>\nint main(){int yas=3;double kilo=4.5;std::cout<<yas<<" "<<kilo;}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b;}',
     '#include <iostream>\nint main(){int s;std::cin>>s;std::cout<<s/60<<" "<<s%60;}',
-    '#include <iostream>\nint main(){int t;std::cin>>t;if(t>30)std::cout<<"Sicak";else if(t<10)std::cout<<"Soguk";else std::cout<<"Ilik";}',
+    '#include <iostream>\nint main(){int t;std::cin>>t;if(t>30)std::cout<<"Hot";else if(t<10)std::cout<<"Cold";else std::cout<<"Warm";}',
     '#include <iostream>\nint main(){int n;std::cin>>n;for(int i=n;i>=1;--i){std::cout<<i;if(i>1)std::cout<<" ";}}',
     '#include <iostream>\nint enBuyuk(int a,int b){return a>b?a:b;}\nint main(){int a,b;std::cin>>a>>b;std::cout<<enBuyuk(a,b);}',
     '#include <iostream>\n#include <vector>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int&x:v)std::cin>>x;int m=v[0];for(int x:v)if(x<m)m=x;std::cout<<m;}',
@@ -24,7 +24,7 @@ SOLUTIONS = [
     '#include <iostream>\n#include <string>\nstruct Urun{std::string ad;int fiyat;};\nint main(){Urun u;std::cin>>u.ad>>u.fiyat;u.fiyat+=u.fiyat/10;std::cout<<u.ad<<" "<<u.fiyat;}',
     '#include <iostream>\nclass Hesap{int b;public:Hesap(int x):b(x){}void yatir(int x){b+=x;}int bakiye()const{return b;}};\nint main(){int a,c;std::cin>>a>>c;Hesap h(a);h.yatir(c);std::cout<<h.bakiye();}',
     '#include <iostream>\n#include <vector>\n#include <algorithm>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int&x:v)std::cin>>x;std::cout<<std::count(v.begin(),v.end(),0);}',
-    '#include <iostream>\n#include <stdexcept>\nint main(){int n;std::cin>>n;try{if(n<0)throw std::runtime_error("negatif");std::cout<<n;}catch(const std::exception&e){std::cout<<"Hata: "<<e.what();}}',
+    '#include <iostream>\n#include <stdexcept>\nint main(){int n;std::cin>>n;try{if(n<0)throw std::runtime_error("negative");std::cout<<n;}catch(const std::exception&e){std::cout<<"Error: "<<e.what();}}',
     '#include <iostream>\nint main(){int n;std::cin>>n;int t=0;for(int i=0;i<n;++i){int p;std::cin>>p;t+=p;}std::cout<<t<<" "<<t/n;}',
     '#include <iostream>\nint main(){int n;std::cin>>n;int*d=new int[n];for(int i=0;i<n;++i)std::cin>>d[i];int m=d[0];for(int i=1;i<n;++i)if(d[i]>m)m=d[i];std::cout<<m;delete[] d;}',
     '#include <iostream>\n#include <memory>\nint main(){int n;std::cin>>n;auto a=std::make_unique<int>(n);*a*=3;auto b=std::move(a);std::cout<<*b;}',

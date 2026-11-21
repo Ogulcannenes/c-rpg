@@ -1,135 +1,265 @@
 # C++ Adventure
 
-Windows 11 için çevrimdışı kullanılabilen, Türkçe/Rusça C++ öğrenme macerası. Masaüstü sürümü WebView2 penceresinde açılır; tarayıcı sekmesi gerekmez. G++ derleyicisi gerçek C++ kodunu çalıştırır.
+C++ öğrenmek için kedili bir macera oyunu. Dersler, görevler ve geri bildirimler Türkçe ve Rusçadır. Yazdığın kod bilgisayarındaki gerçek G++ derleyicisiyle derlenip güvenli bir sandbox içinde çalıştırılır. Uygulama internet olmadan çalışır; isteğe bağlı AI öğretmen ise ücretsiz bir çevrimiçi servis kullanır.
 
-Modernizasyon sonuç raporu (0.5.0, ekran görüntüleriyle): [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md)
+![Ana panel](docs/screenshots/03-sonra-panel.png)
 
-## Hızlı başlatma
+**Sürüm:** 0.5.0 · **Platform:** Windows 10/11 (64 bit) · **Diller:** Türkçe, Русский
 
-Kaynak koddan çalıştırmak için `start-desktop.bat` dosyasını açın. Varsa `dist\CppAdventure\CppAdventure.exe` derlemesini, yoksa proje içindeki `.venv` ile `desktop.py`'yi başlatır. Eski `dist-stage…` klasörlerine artık bakılmaz; bu klasörler silinmedi, isterseniz elle kaldırabilirsiniz.
+---
 
-### Windows paketi ve kurulum (sürüm 0.5.0)
+## İçindekiler
 
-1. Windows 11, Python 3.10+, G++ (MSYS2 UCRT64 önerilir) ve WebView2 Runtime gerekir.
-2. `build-windows.bat` dosyasını çalıştırın. İlk çalıştırmada `requirements-desktop.lock.txt` içindeki tam sürümler `.venv` ortamına kurulur; bunun için internet gerekir.
-3. Uygulama `dist\CppAdventure\CppAdventure.exe` konumuna çıkar. Exe dosyası sürüm bilgisini taşır ve UPX ile sıkıştırılmaz (virüs programlarının yanlış alarmını azaltmak için).
-4. Kurulum dosyası:
-   - **Inno Setup 6 kuruluysa** `dist\C++Adventure-Setup-0.5.0.exe` oluşur. Yönetici izni gerekmez ve kullanıcının hesabına kurulur. Türkçe ve Rusça kurulum ekranı vardır. Uygulama açıksa kapatılması istenir. WebView2 yoksa uyarılır. Denetim Masası'ndan kaldırılabilir. Kaldırma, sandbox AppContainer profilini de siler; **profiller, ilerleme ve yedekler (`%LOCALAPPDATA%\CppAdventure`) silinmez.**
-   - Inno Setup yoksa eski tek dosyalık kurulum (`dist\C++Adventure-Setup.exe`) oluşur. Bunun kaldırma aracı yoktur.
-5. Dosyalar **kod imzalı değildir** (imza sertifikası yok); Windows SmartScreen ilk açılışta uyarı gösterebilir.
+- [Özellikler](#özellikler)
+- [Sistem gereksinimleri](#sistem-gereksinimleri)
+- [Kurulum](#kurulum)
+- [İlk kullanım](#ilk-kullanım)
+- [Ayarlar](#ayarlar)
+- [Ücretsiz AI öğretmen (isteğe bağlı)](#ücretsiz-ai-öğretmen-isteğe-bağlı)
+- [Verilerin, yedekler ve geri yükleme](#verilerin-yedekler-ve-geri-yükleme)
+- [Kaldırma](#kaldırma)
+- [Kaynak koddan paket oluşturma](#kaynak-koddan-paket-oluşturma)
+- [Testler ve puanlar](#testler-ve-puanlar)
+- [Güvenlik ve gizlilik](#güvenlik-ve-gizlilik)
+- [Sorun giderme](#sorun-giderme)
+- [Ortam değişkenleri](#ortam-değişkenleri)
+- [Proje yapısı](#proje-yapısı)
+- [Belgeler](#belgeler)
 
-Uygulama aynı Windows kullanıcısı için tek kopya çalışır: ikinci kez açılınca açık pencere öne gelir. WebView2 yoksa uygulama, ücretsiz kurulum bağlantısını Türkçe ve Rusça gösterip kapanır. G++ PATH'te değilse `C:\msys64` altındaki MSYS2 kurulumları da aranır; başka bir konum için `CPP_ADVENTURE_COMPILER` ortam değişkenine derleyicinin tam yolunu yazın.
+---
 
-Normal uygulama kullanımı için Python, Node.js, npm veya internet bağlantısı gerekmez (yalnızca isteğe bağlı AI öğretmen internet kullanır). G++ kod derleme için gereklidir.
+## Özellikler
 
-## En son görsel güncelleme
+- **24 bölüm, 192 görev:** İlk programdan başlayıp pointer, akıllı işaretçiler, kalıtım, şablonlar ve STL'e uzanır. Modern C++ bölümleri de var: taşıma semantiği, `optional`/`variant`/`string_view`, concepts ve ranges, gerçek `std::thread`/`mutex`/`atomic`.
+- **Her bölümde aynı yapı:**
+  - Önce konu anlatımı gelir: kod örnekleri, sık yapılan hatalar ve satır satır oynayan "canlı anlatım" animasyonları.
+  - Ardından 8 görev çözülür: kavram sorusu, çıktı tahmini, hata düzeltme, ısınma, pratik ve bölüm sonu boss'u.
+- **Gerçek değerlendirme:** Kod gerçekten derlenir ve gizli testlerle çalıştırılır. Görevin istediği C++ yapısının gerçekten kullanıldığı da denetlenir. Programın yazdırması gereken çıktılar İngilizcedir; görev açıklamaları Türkçe ve Rusçadır.
+- **Yetenek ağacı:** Bölümler ön koşullara göre açılır. Kilitli bir bölüme tıklayınca hangi bölümlerin bitirilmesi gerektiği gösterilir.
+- **Kod editörü:** Monaco editörü, C++ önerileri, program girdisi ve çıktısı paneli. Monaco yüklenemezse sade bir yedek editör devreye girer.
+- **Oyun öğeleri:**
+  - XP, seviye ve günlük seri
+  - Başarımlar
+  - Kedi yoldaş ve aksesuar dükkânı
+  - Lonca ve dünya haritası
+  - Günlük Arena
+- **Pratik alanları:**
+  - Kod laboratuvarı
+  - Görsel laboratuvarlar (bellek, pointer, sıralama, çağrı yığını)
+  - Geliştirici araçları (Git, CMake ve terminal simülasyonu)
+  - Çok dosyalı proje atölyesi
+  - Mülakat modu ve kariyer/portföy
+- **Öğrenme günlüğü ve istatistikler:** Hangi konularda güçlü olduğunu, nerede tekrar gerektiğini ve çalışma süreni gösterir.
+- **Erişilebilirlik:**
+  - Tüm uygulama klavyeyle kullanılabilir.
+  - Görünüm değişince odak sayfa başlığına gider.
+  - Yazı boyutu ayarlanabilir: %100–150, Ctrl + Artı / Eksi ile de.
+  - "Animasyonları azalt" seçeneği var.
+- **Profiller:** Aynı bilgisayarda birden çok oyuncu olabilir; her profil isteğe bağlı PIN ile kilitlenebilir.
 
-Kedi dükkânında yerel SVG katmanlarıyla baş, kulak, boyun, gövde, sırt ve oyuncak yuvalarına uygun aksesuar önizlemesi bulunur. Her yuvada bir aksesuar birlikte denenebilir; önizleme XP harcamaz. Sahip olunan eşyalar profilde giydirilebilir/çıkarılabilir ve kombinler kaydedilip yeniden uygulanabilir. Yeni arayüz Türkçe ve Rusça’dır. Ayrıntılar ve doğrulama sonuçları için [DEVAM.md](DEVAM.md) içindeki Ultimate Visual Learning & Cat Companion 2.0 Aşama 2 kaydına bakın.
+## Sistem gereksinimleri
 
-## Bilgisayarda doğrulananlar
+| Bileşen | Gerekli mi? | Not |
+|---|---|---|
+| Windows 10 veya 11, 64 bit | Evet | |
+| Microsoft Edge WebView2 Runtime | Evet | Windows 11'de hazır gelir. Eksikse uygulama ücretsiz indirme bağlantısını gösterir. |
+| G++ derleyicisi (MSYS2 UCRT64 önerilir) | Kod görevleri için evet | Dersler, quizler ve tahmin soruları derleyicisiz de çalışır. |
+| İnternet | Hayır | Yalnızca isteğe bağlı AI öğretmen ve ilk kurulumdaki indirmeler için gerekir. |
+| Python 3.10+ | Yalnızca kaynak koddan çalıştırmak için | Kurulu uygulama Python istemez. |
 
-- Windows 11 (10.0.26300), Python 3.14.7, G++ 16.2.0 ve VS Code bulundu.
-- 16 işlemci iş parçacığı ve 15.2 GB RAM görüldü; ayrı GPU gerekmez.
-- WebView2 Runtime bulundu. WebView2 masaüstü penceresi uygulamayla birlikte başlatıldı.
-- `dist/C++Adventure-Setup.exe` oluşturuldu ve geçici bir test konumuna kuruldu. Uygulama dosyası ile Başlat menüsü ve masaüstü kısayolları doğrulandı.
+## Kurulum
 
-## Kullanım
+### 1. C++ derleyicisini kur (bir kez)
 
-- İlk açılışta profil oluşturun. İsteğe bağlı 4–8 rakamlı PIN tanımlayabilirsiniz.
-- Açılış ekranı en az 3,5 saniye görünür. Yüzde yerel servis, SQLite, profiller ve seçili profil ilerlemesi gerçekten hazır oldukça güncellenir; erken hazır olursa gerçek %100 değerinde kısa süre bekler. Ekranda sürüm ve `Created by Ogulcanenes` bilgisi görünür.
-- PIN korumalı profil seçimi veya silme, uygulama içindeki animasyonlu kedi PIN penceresini kullanır. PIN başlangıçta gizlidir; göz düğmesiyle gösterilebilir. Yanlış ve doğru denemelerde kedi farklı tepki verir. Enter ile gönderilir, Escape ile iptal edilir.
-- Profil başına dil, avatar, XP, seviye, görevler, quiz denemeleri ve başarımlar bağımsız SQLite kaydı tutar.
-- Bölüm seçince görevlerden önce konu anlatımı gösterilir. Quiz ve çıktı tahmini alanları boş başlar; doğru cevap hazır yazılı gelmez.
-- Bilgi haritası konuların ön koşullarını gösterir. Ön koşul Boss görevleri bitmeden bölüm açılamaz; kilit denetimi hem ekranda hem görev gönderme servisinde uygulanır.
-- Görev akışı mini quiz, çıktı tahmini, hata düzeltme, kodlama ve bölüm sonu Boss Challenge içerir. Kod görevleri gerçek G++ derlemesiyle değerlendirilir.
-- Hata düzeltme, kodlama ve Boss görevlerinde önce bütün G++ test girdileri çalışır, ardından görevin C++ kavramı ayrı doğrulanır. Yalnızca ikisi de geçerse görev tamamlanır ve XP kazanılır. Clang kuruluysa `main` fonksiyonunun AST'siyle yapısal denetim yapılır; yalnızca G++ bulunan kurulumlarda yorum ve metin sabitlerini ayıklayan yapısal geri dönüş kullanılır.
-- Her bölümün 4. kodlama görevi ile Boss Challenge'ı farklı senaryo, başlangıç kodu ve test girdilerine sahiptir. Boss'lar ayrıca daha kapsamlı, birden fazla girdiye dayalı görevlerdir.
-- Kod editöründe öneriler C++ için hazırlanmış snippet’lerden gelir; sıradan kelime tamamlamaları kapalıdır. `Tab` ile seçili öneriyi ekleyin. `Ctrl+S` kayıt/yedekleme ekranını açar.
-- Uygulama içindeki Çalıştır panelinde girdi alanını açıp program başlamadan önce bir veya birden fazla satır girebilirsiniz. Derleme durumu, stdout, program stderr’i, derleyici mesajları, çıkış kodu ve geçen süre ayrı gösterilir; derleme/çalıştırma için CMD penceresi açılmaz.
-- Hata alınca test adı, beklenen ve alınan çıktı ile yerel derleyici açıklaması gösterilir. Ayarlardan ücretsiz çevrimiçi AI (Groq), çevrimdışı ipuçları veya AI kapalı seçilebilir.
-- Groq'a kod göndermek için her tanılama isteğinde ayrıca onay gerekir. Kodun yanı sıra görev metni, derleyici/test raporu ve sınırlı quiz geçmişi gönderilir; isim, profil kimliği ve gizli testler gönderilmez.
-- Kayıt menüsü JSON dışa/içe aktarma ve manuel yedeklemeyi içerir. Veriler otomatik olarak kaydedilir.
-- Öğrenme günlüğü her doğru/yanlış görev denemesini profil bazında kaydeder; konu başarısını, tekrar önerilerini ve son denemeleri gösterir. Günlük kayıtları JSON yedeklerine de dahil edilir.
-- Kod laboratuvarında kaynak kod için yerel okunabilirlik sezgiselleri bulunur. Code Golf karşılaştırması iki çözümü aynı girdiyle gerçek G++ üzerinden derleyip çıktıları, kod boyutlarını ve yaklaşık derleme+çalışma sürelerini yan yana gösterir. Süre ölçümü algoritmik karmaşıklık analizi değildir.
-- Görsel laboratuvarlar değişken, koşul, döngü, fonksiyon, dizi, pointer, güvenli bellek, OOP ve algoritmaları adım adım simüle eder; bubble/selection/insertion sort, linear/binary search ve factorial recursion adımlarını gösterir. Memory Playground stack, queue, linked list ve dinamik bellek yaşam döngüsünü güvenli sembolik simülasyonla gösterir. Oynat/duraklat/sıfırla/ileri/geri ve hız kontrolleri vardır. Laboratuvar başarı XP’si profil bazında bir kez SQLite’a yazılır ve JSON yedeğine alınır; simülasyon, kullanıcının gerçek C++ kodunu çalıştırmaz.
-- Project Workshop mevcut eğitim görevlerine ek olarak çok dosyalı yerel çalışma alanlarını, Monaco dosya düzenlemeyi, G++ derleme/çalıştırmayı, standart girdi ve profile bağlı kaydetme/yedeklemeyi destekler. CMake kullanıcı hesabına kuruldu; uygulama PATH dışında kalan kullanıcı kurulumunu da bulur ve doğrulanmış kaynak listesinden güvenli build yapılandırması üretir.
-- Kariyer paneli gerçek görev ve proje ilerlemesine göre basamak açar. Mülakat modu çevrimdışı Türkçe/Rusça C++ soruları ve G++ ile puanlanan kod görevleri sunar. Portföy kaydedilen proje durumlarını ve kullanıcının açıklamalarını içerir; Markdown olarak dışa aktarılabilir.
-- Kedi dükkânındaki aksesuarlar artan XP fiyatlarına sahiptir ve seçili kedi görünümünde gösterilir.
-- RPG loncası, kedi yoldaşı, ekipman ve bir defalık gizli görevler gerçek profil XP/öğrenme verisine dayanır. Offline Coding Arena günlük görevleri yerel G++ testleri ve profil bazlı kişisel rekorlarla çalışır.
-- RPG içindeki C++ Dünya Haritası 20 müfredat bölgesini ilerlemeye göre açar; bölümlere ve Boss Challenge görevlerine doğrudan geçiş sunar. Gelişim paneli konu, hata, süre, görev ve XP istatistiklerini SQLite kayıtlarından hesaplar.
-- İleri C++ modülü güvenli concurrency adım simülasyonu ve kod çalıştırmadan `-O0`/`-O2` Assembly üretimi sunar. Ders eklentileri yalnızca doğrulanmış JSON içerik manifestleridir; eklenti kodu çalıştırılmaz.
-- Eklenti ekranındaki **Eklenti ekle** düğmesi iki dilde ders manifesti `.json` dosyası yükler. Örnek biçim `plugins/std_array_intro.json` içindedir; kendi dosyanızda benzersiz bir `id` kullanın. Eklentiler kullanıcıya özel yerel eklenti klasörüne kurulur; etkinleştirme her profil için ayrıdır. Yalnızca `lessons.read` izni desteklenir; 1–12 ders, en fazla 100 KB ve Türkçe/Rusça içerik zorunludur. Yeni sürüm yalnızca sürüm numarası yükseltilerek yüklenebilir. Uygulama içinden kaldırma eklentiyi yerel olarak siler ve bütün profillerdeki etkinleştirme kayıtlarını temizler. Script, bilinmeyen alan ve uygulama kodu çalıştırma desteklenmez.
-- Dil değiştirildiğinde açık olan modül ekranları ortak dil olayıyla yeniden çizilir. Menü, istatistik ve geliştirici aracı etiketleri ile araç ipuçları merkezi `web/locales.json` kataloğundan anında güncellenir. Paketleme akışı örnek `std::array` eklentisini ve `web/assets/cpp-world-map.svg` yerel haritasını da masaüstü paketine ekler.
+1. https://www.msys2.org adresinden MSYS2'yi indirip kur. Varsayılan konum `C:\msys64` uygundur. Alternatif: `winget install MSYS2.MSYS2`.
+2. Başlat menüsünden **MSYS2 UCRT64** penceresini aç ve şunu çalıştır:
 
-## Veri konumları
+   ```bash
+   pacman -S --needed mingw-w64-ucrt-x86_64-gcc
+   ```
 
-- Kaynak geliştirme çalıştırması: `data/adventure.db`, `backups/`, `student-work/`.
-- Kurulu Windows uygulaması: `%LOCALAPPDATA%\CppAdventure\data\adventure.db`, `%LOCALAPPDATA%\CppAdventure\backups\` ve `%LOCALAPPDATA%\CppAdventure\student-work\`.
-- Başlangıçta hata olursa kullanıcıya açıklama gösterilir; tanılama kaydı `%LOCALAPPDATA%\CppAdventure\logs\startup.log` konumuna yazılır.
-- `start.bat` ile ilk masaüstü açılışında eski `data/adventure.db` içindeki profiller otomatik aktarılır. Hedefte ilerleme varsa üzerine yazılmaz; boş hedef değiştirilmeden önce `.pre-migration.bak` kopyası saklanır.
-- JSON dışa aktarma profil bazlıdır; PIN özeti dışa aktarılmaz. İçe aktarma mevcut seçili profil ilerlemesinin yerini alır.
+3. Bu kadar. Uygulama derleyiciyi önce `PATH` içinde arar. Orada bulamazsa `C:\msys64\ucrt64\bin` gibi standart MSYS2 konumlarına bakar; yani PATH ayarı yapmak zorunda değilsin. Başka bir konum kullanıyorsan `CPP_ADVENTURE_COMPILER` ortam değişkenine `g++.exe` dosyasının tam yolunu yaz.
 
-## Dersler ve görsel laboratuvar
+### 2a. Kurulum dosyasıyla (önerilen)
 
-- Her bölümde 5 konu anlatımı var: iki temel konu, kod örnekli adım adım anlatım, ✗/✓ işaretli sık yapılan hatalar ve kendini kontrol listesi (Türkçe ve Rusça).
-- Her bölümde 8 görev var: iki kavram sorusu (tıklanabilir şıklı), iki çıktı tahmini, hata düzeltme, ısınma programı, pratik görevi ve boss. Yeni tahmin cevapları ve ısınma görevleri `tests/test_lesson_extra.py` içinde gerçek g++ ile doğrulanır.
-- Konu anlatımlarında 36 "canlı anlatım" sahnesi var (`lesson_scenes.py`, `web/lesson-scenes.js`): sahne ekrana girince kendiliğinden oynar; kod satır satır yürür, değerler kod satırından bellekteki yerlerine uçar, bellek şeridi her değişkenin adresini ve kapladığı baytı gösterir. Derleme/dosya/istisna akışları, işlem sırası, koşul, döngü, çağrı yığını, dizi/string/map ve sınıf→nesne sahneleri Türkçe ve Rusça anlatılır.
-- Görsel laboratuvarda kod satır satır vurgulanır; değişkenler stack/heap üzerinde adresleriyle belirir, pointer okları ve dereference ışığı, sıralamada yer değiştiren çubuklar, döngü izi, koşul çatalı, çağrı yığını, stack/queue ve sınıf→nesne animasyonları gösterilir (`web/lab-theater.js`). Zaman çizelgesine tıklayarak istenen adıma atlanır; ← → ile adım, Boşluk ile oynat/duraklat.
+1. `C++Adventure-Setup-0.5.0.exe` dosyasını çalıştır. Kurulum yönetici izni istemez ve programı yalnızca senin Windows hesabına kurar.
+2. Kurulum dilini seç (Türkçe veya Русский) ve adımları izle. Masaüstü kısayolu isteğe bağlıdır.
+3. Uygulama açıksa kurulum, devam etmeden önce kapatmanı ister. WebView2 eksikse bunu bildirir.
 
-## Giriş, geliştirici araçları ve atölye
+Kurulum dosyası imzalı değildir; Windows SmartScreen "Bilinmeyen yayımcı" uyarısı gösterebilir. Bu durumda **Ek bilgi → Yine de çalıştır** seç. Kurulum dosyasını kendin üretmek için [Kaynak koddan paket oluşturma](#kaynak-koddan-paket-oluşturma) bölümüne bak.
 
-- Kayıt artık interaktif bir karakter seçicidir (`web/onboarding.js`): 7 kedi karakteri, canlı önizleme, isim ve isteğe bağlı PIN. Kayıttan sonra profil doğrudan açılır. PIN korumalı profiller mevcut PIN olmadan düzenlenemez.
-- Geliştirici araçları: Git için görsel depo şeması (çalışma alanı → hazırlık → commit grafiği → origin) ve adım rehberi, çakışma işaretli dosyayla elle birleştirme, adım adım oluşan CMakeLists.txt, gerçek G++ test laboratuvarı ve geçmişli güvenli terminal. Tüm mesajlar Türkçe/Rusça.
-- İleri C++: her thread için ayrı şerit, kaybolan güncellemelerin gösterildiği race condition/mutex simülasyonu; Compiler Explorer yalnızca kendi fonksiyonlarının assembly'sini gösterir ve O0/O2'yi karşılaştırır.
-- Proje atölyesi: 8 proje (zorluk, kavramlar, çalışma planı, örnek girdi/çıktı) ve çok dosyalı alan için hazır şablonlar. Yeni projelerin çözümleri `tests/test_workshop_projects.py` ile doğrulanır.
+### 2b. Kaynak koddan çalıştırma (geliştiriciler için)
 
-## Ücretsiz AI öğretmen (Groq)
-
-AI öğretmen yalnızca **Groq'un ücretsiz planını** kullanır: internet bağlantısı gerekir, bilgisayara model indirilmez ve hiçbir zaman ücret alınmaz. Yerel (Ollama) ve ücretli (OpenAI, Claude) seçenekler kaldırıldı; bu seçenekleri kullanan profiller otomatik olarak Groq'a geçirildi.
-
-1. https://console.groq.com/keys adresinde ücretsiz hesap aç (kredi kartı gerekmez) ve bir API anahtarı oluştur (`gsk_` ile başlar).
-2. Uygulamada ⚙ Ayarlar > AI öğretmen sağlayıcısı > **Groq API anahtarı** kutusuna yapıştırıp **Anahtarı kaydet**'e bas. Anahtar kaydedilirken token harcamadan sınanır; AI öğretmen otomatik olarak Groq'a geçer. **Anahtarı sına** ile daha sonra da kontrol edebilirsin.
-
-- Model `openai/gpt-oss-120b`; sınır dolarsa ya da model kaldırılmışsa `openai/gpt-oss-20b` denenir, o da olmazsa çevrimdışı ipuçları gösterilir. Ücretsiz sınır aşıldığında Groq ücret almaz, yalnızca bir süre yanıt vermez. Modeller `CPP_ADVENTURE_GROQ_MODEL` ve `CPP_ADVENTURE_GROQ_FALLBACK_MODEL` ile değiştirilebilir.
-- İpucu üç seviyelidir: önce yön gösterir, **Daha ayrıntılı ipucu** ile hatalı satırı işaret eder, üçüncü seviyede adım adım anlatır. Tam çözüm hiçbir seviyede yazılmaz.
-- Yanıt dili her zaman arayüz dilidir (Türkçe veya Rusça). Öğrenci kodu "güvenilmeyen veri" olarak işaretlenir; koda yazılan "kuralları unut" gibi talimatlar dikkate alınmaz.
-- Anahtar yoksa, internet yoksa, anahtar reddedilirse ya da sınır dolarsa uygulama çevrimdışı ipucunu gösterir ve nedenini Türkçe/Rusça açıklar.
-- Anahtar `%LOCALAPPDATA%\CppAdventure\secrets` içinde (Windows'ta DPAPI ile şifreli) saklanır; proje klasörüne, veritabanına, kayıt dosyasına ve sayfaya gönderilmez. `GROQ_API_KEY` ortam değişkeni de kullanılabilir.
-
-## Test paneli
-
-Deneme yapmak için üst çubuktaki anahtar düğmesine bas ya da `Ctrl+Shift+A` kısayolunu kullan. Panel yalnızca etkin profili değiştirir:
-
-- XP ekleme veya doğrudan ayarlama, seviye ve günlük seri ayarlama (seviye, kedinin büyüme aşamasını da değiştirir)
-- tüm kedi eşyalarını verme veya silme, bölüm tamamlama, tüm başarımları verme, ilerlemeyi sıfırlama
-- konfeti, kedi tepkileri, seviye atlama ve başarım bildirimi gibi animasyonları tetikleme
-
-Panel varsayılan olarak **kapalıdır** (dağıtılan sürümde XP/seviye değiştirilemez). Geliştirme ve test için uygulamayı `CPP_ADVENTURE_ADMIN=1` ortam değişkeniyle başlat; aksi hâlde düğme görünmez ve `/api/admin` 403 döner.
-
-## Test
-
-Proje kökünden:
-
-```powershell
-python -m py_compile server.py curriculum.py lesson_content.py desktop.py plugin_system.py
-node --check web/app.js
-python -m unittest discover -s tests -v
+```bat
+:: Proje klasöründe
+setup-desktop.bat      :: .venv oluşturur ve sabitlenmiş bağımlılıkları kurar (internet gerekir)
+start-desktop.bat      :: masaüstü penceresinde açar
 ```
 
-2026-11-19 güncellemesinden sonra tam regresyonda **118 otomatik test geçti, 0 başarısız** (Linux, Python 3.10, g++). Windows Job Object sınırları ve yeniden yazılan `build-windows.bat` bu ortamda çalıştırılamadı; Windows'ta ayrıca denenmelidir.
+- `start-desktop.bat`, `dist\CppAdventure\CppAdventure.exe` varsa onu açar; yoksa kaynak kodu `.venv` içindeki Python ile çalıştırır.
+- Tarayıcıda açmak için: `start-browser.bat`. Bu, `python server.py` komutunu çalıştırır ve http://127.0.0.1:8765 adresini açar.
+- Bağımlılıkların tam sürümleri `requirements-desktop.lock.txt` dosyasındadır.
 
-**Görsel masaüstü doğrulaması:** Altı atlas karakteri ayrı PNG'lere kırpıldı ve gerçek `CppAdventure.exe` penceresinde Türkçe ve Rusça ad, rol ve açıklamalarıyla altı büyük kart olarak kontrol edildi. Hata Avcısı kartının Rusça laboratuvar bağlantısı açılarak hedef ekranda karakter kılavuzu da doğrulandı.
+## İlk kullanım
 
-## Mevcut kapsam ve sonraki aşamalar
+1. **Karakterini seç:** 7 kedi karakteri var. Bir isim gir; istersen 4–8 haneli bir PIN de belirle.
+2. **Ana üs:** "Kaldığın yerden devam et" kartı seni sıradaki göreve götürür.
+3. **Ders:** Önce konu anlatımını oku. Canlı anlatımlar ekrana girince kendiliğinden oynar.
+4. **Görevler:** Sırayla açılır; çözdüğün görev sıradakini açar. Kod görevlerinde:
+   - kodu yaz,
+   - **Çalıştır** ile dene,
+   - **Görevi gönder** ile değerlendirt.
+5. **İpucu:** Takılırsan ipuçlarını kullanabilirsin. Kullanılan ipucu, o görevden kazanılan XP'yi %10 azaltır.
+6. **Bölüm sonu:** Bölümün boss'unu yenince yetenek ağacında ona bağlı bölümler açılır.
 
-Çalışan çekirdek müfredat 20 ana bölüm ve bölüm başına 5 görev (100 görev) içerir. İlk 15 bölüm temelleri, c16–c20 bölümleri pointer ve `new`/`delete`, akıllı işaretçiler ve RAII, kalıtım ve polimorfizm, şablonlar ve lambda'lar, `map`/`set` konteynerlerini kapsar. Ders, görev, quiz yanıtı, ipucu ve ana arayüz Türkçe/Rusça hazırlanmıştır. Yerel test/derleyici değerlendirmesi AI yanıtından bağımsızdır.
+Kısayollar:
 
-Geliştirici Araçları ekranında profil bazlı kalıcı sanal Git/branch/merge ve push/pull, conflict çözme, güvenli terminal simülatörü, sıralı CMake öğretim laboratuvarı ve gerçek G++ test laboratuvarı vardır. Keyfi terminal komutları ve kullanıcı CMake betikleri çalıştırılmaz. Project Workshop çok dosyalı G++ çalıştırma ve profile bağlı kayıt sunar; güvenli CMake derlemesi CMake kurulumuna bağlıdır. Uyarlanabilir öğrenme ve tekrar motoru profilin gerçek deneme geçmişini kullanır; en az üç gözlem olmadan tahmin üretmez. Bilgi haritası konu başarısını, istatistik paneli görünür uygulama süresi ve gerçek görev verilerini gösterir. Offline Arena, RPG loncası, concurrency/Assembly Explorer ve data-only eklenti sistemi de pakete dahildir. Multiplayer kapsam dışıdır.
+| Kısayol | Ne yapar |
+|---|---|
+| Ctrl + S | Kaydetme ve yedekleme penceresi |
+| Ctrl + Artı / Eksi / 0 | Yazı boyutunu büyüt / küçült / sıfırla |
+| Ctrl + M (editörde) | Tab tuşunun girinti eklemesi ile odağı taşıması arasında geçiş |
+| Tab ilk basış | "İçeriğe geç" bağlantısı |
 
-## Kod çalıştırma güvenliği
+## Ayarlar
 
-Kod yalnızca yerel bilgisayarda G++ ile (`-Wall -Wextra` uyarılarıyla) derlenir. Kaynak kod boyutu sınırı, geçici derleme klasörü, derleme/çalıştırma zaman aşımı, program çıktısı için 64 KB sınırı ve bellek/alt süreç sınırları (`sandbox.py`; Windows'ta Job Object, Linux'ta rlimit) vardır. Yerel API yalnızca `127.0.0.1`/`localhost` Host başlığını kabul eder, çapraz site ve `Origin` uyuşmayan istekleri reddeder ve POST için `application/json` ister. Bu, tam izole bir işletim sistemi sandbox’ı değildir; güvenilmeyen C++ kodunu çalıştırmayın. AI’ye veri gönderimi çevrimdışı varsayılanda gerçekleşmez ve OpenAI isteği başına açık kullanıcı onayı gerektirir.
+⚙ düğmesiyle açılır:
 
-## Görseller ve lisans
+- **AI öğretmen:** Ücretsiz çevrimiçi AI (Groq), çevrimdışı ipuçları ya da kapalı.
+- **Görünüm:** Yazı boyutu (%100 / 115 / 130 / 150) ve **Animasyonları azalt**.
+- **Dil:** Üst çubuktaki Русский / Türkçe düğmesi; anında değişir.
 
-Maskot ve arka plan çizimleri proje için üretilmiş, yerel `web/assets/` dosyalarıdır; yükleme sırasında internet gerekmez. Harici fotoğraf/meme alıntısı bu sürümde kullanılmadı.
+## Ücretsiz AI öğretmen (isteğe bağlı)
+
+AI öğretmen yalnızca **Groq'un ücretsiz planını** kullanır. Kredi kartı gerekmez, ücret alınmaz ve bilgisayarına model indirilmez.
+
+1. https://console.groq.com/keys adresinde ücretsiz bir hesap aç ve bir API anahtarı oluştur. Anahtar `gsk_` ile başlar.
+2. Uygulamada ⚙ Ayarlar → **Groq API anahtarı** kutusuna yapıştır ve **Anahtarı kaydet**'e bas. Anahtar, token harcamadan sınanır.
+3. Bir kod görevinde **Kodumu incele**'ye bas. Kodun her seferinde, ancak sen onay verdikten sonra gönderilir.
+
+Ayrıntılar:
+
+- **Üç seviyeli ipucu:** İlki yön gösterir, ikincisi hatalı satırı işaret eder, üçüncüsü adım adım anlatır. Tam çözüm hiçbir seviyede yazılmaz.
+- **Gönderilmeyenler:** Adın, profil kimliğin ve gizli testler Groq'a gitmez.
+- **Çevrimdışı ipucu:** İnternet yoksa, sınır dolduysa ya da anahtar yoksa çevrimdışı ipucu gösterilir ve nedeni açıklanır.
+- **Anahtarın saklanması:** Anahtar `%LOCALAPPDATA%\CppAdventure\secrets` içinde, Windows DPAPI ile şifreli saklanır. Kayıt dosyalarına ve sayfaya gönderilmez.
+
+## Verilerin, yedekler ve geri yükleme
+
+| Ne | Kurulu uygulamada | Kaynak koddan çalışırken |
+|---|---|---|
+| Veritabanı (profiller, ilerleme) | `%LOCALAPPDATA%\CppAdventure\data\adventure.db` | `data\adventure.db` |
+| Otomatik yedekler | `%LOCALAPPDATA%\CppAdventure\backups\` | `backups\` |
+| Günlükler (açılış, beklenmeyen hatalar) | `%LOCALAPPDATA%\CppAdventure\logs\` | `logs\` |
+| VS Code ile açılan kod | `%LOCALAPPDATA%\CppAdventure\student-work\` | `student-work\` |
+
+Yedekleme:
+
+- **Otomatik yedekler:** Uygulama, veritabanı şemasını yükseltmeden ve bir yedekten geri yüklemeden önce doğrulanmış bir kopya alır. Kopyalar `backups\` klasörüne yazılır ve uygulama onları **hiçbir zaman silmez**.
+- **Elle yedekleme:** Ctrl + S ile açılan pencerede üç seçenek var:
+  - **Dışa aktar:** Seçili profili bir JSON dosyasına kaydeder. PIN bu dosyaya yazılmaz.
+  - **İçe aktar:** Bir JSON dosyasını seçili profile geri yükler. PIN'li profillerde PIN sorulur.
+  - **Yedek al:** Tüm veritabanının bir kopyasını alır.
+
+Bir yedeği elle geri yüklemek için:
+
+1. Uygulamayı kapat.
+2. `adventure.db` dosyasını başka bir yere taşı.
+3. `backups\` içindeki istediğin dosyayı `adventure.db` adıyla `data\` klasörüne kopyala.
+4. Uygulamayı yeniden aç.
+
+## Kaldırma
+
+**Ayarlar → Uygulamalar → C++ Adventure → Kaldır**. Ya da Denetim Masası → Programlar.
+
+- Program dosyaları ve öğrenci kodu sandbox profili (yalnızca geçici çalıştırma dosyaları) silinir.
+- **Profillerin, ilerlemen ve yedeklerin silinmez.** Bunlar `%LOCALAPPDATA%\CppAdventure` klasöründe kalır; tamamen kaldırmak istersen o klasörü kendin silebilirsin.
+
+## Kaynak koddan paket oluşturma
+
+```bat
+build-windows.bat
+```
+
+1. `.venv` hazırlanır ve PyInstaller ile `dist\CppAdventure\CppAdventure.exe` oluşturulur. Exe, sürüm bilgisini taşır ve UPX ile sıkıştırılmaz.
+2. **Inno Setup 6** kuruluysa (ücretsiz: https://jrsoftware.org/isdl.php) `dist\C++Adventure-Setup-<sürüm>.exe` kurulum dosyası üretilir. Bu kurulumun kaldırıcısı vardır, Türkçe/Rusça kurulum ekranı sunar ve açık uygulamayı kapattırır. Betik: `installer\CppAdventure.iss`.
+3. Inno Setup yoksa eski tek dosyalık kurulum (`dist\C++Adventure-Setup.exe`) üretilir. Bunun kaldırıcısı yoktur.
+
+Sürüm numarası tek yerde tutulur: `server.py` → `APP_VERSION`.
+
+## Testler ve puanlar
+
+```bat
+.venv\Scripts\python.exe -B -m unittest discover -s tests
+:: MSYS2 Python ile oluşturulan ortamda: .venv\bin\python.exe
+```
+
+Test paketinde 302 test var. Tam çalıştırma yaklaşık 5 dakika sürer, çünkü görev çözümleri gerçek G++ ile derlenir. Test ayrıntıları, aşamalara göre sonuçlar ve görsel/teknik kalite puanları **[SCORES.md](SCORES.md)** dosyasındadır.
+
+## Güvenlik ve gizlilik
+
+- **Öğrenci kodu sandbox'ı:** Kod, Windows'ta yetkisiz bir AppContainer ve Job Object içinde çalışır:
+  - ağ yok, kullanıcı dosyalarına erişim yok, alt süreç başlatılamaz;
+  - bellek ve süre sınırı var, çıktı 64 KB ile sınırlı.
+  - Derleme zamanında dosya okumaya yarayan hileler engellenir: dış yollu `#include`, `#embed`, `.incbin`.
+- **Yerel API:**
+  - Yalnızca `127.0.0.1` adresinden erişilebilir.
+  - Her açılışta yenilenen bir oturum çerezi ister.
+  - Katı CSP ve güvenlik başlıkları kullanır.
+  - PIN'li profiller, PIN girilmeden açılmaz.
+- **Cevapların saklanması:** Görevlerin cevapları ve gizli testleri tarayıcıya gönderilmez. Başarısız bir gizli testin girdisi ve beklenen çıktısı da gösterilmez.
+- **Varsayılan durum:** Uygulama çevrimdışıdır. AI öğretmen yalnızca anahtar eklendiğinde ve her istekte onay verildiğinde veri gönderir.
+
+## Sorun giderme
+
+| Belirti | Çözüm |
+|---|---|
+| "G++/Clang++ bulunamadı" | [Derleyiciyi kur](#1-c-derleyicisini-kur-bir-kez). Standart dışı bir konumdaysa `CPP_ADVENTURE_COMPILER` ortam değişkenini ayarla. |
+| Uygulama açılmıyor, WebView2 uyarısı çıkıyor | Gösterilen bağlantıdan WebView2 Runtime'ı kur (ücretsiz): https://go.microsoft.com/fwlink/p/?LinkId=2124703 |
+| İkinci kez açınca yeni pencere gelmiyor | Normal: uygulama tek kopya çalışır ve açık pencereyi öne getirir. |
+| "Beklenmeyen bir hata oluştu (kod …)" | Ayrıntı `logs\server-errors.log` dosyasındadır; hata koduyla aranabilir. |
+| Açılışta hata mesajı | `%LOCALAPPDATA%\CppAdventure\logs\startup.log` dosyasına bak. |
+| AI öğretmen yanıt vermiyor | Ayarlar → **Anahtarı sına**. Ücretsiz sınır dolduysa bir süre bekle; bu sırada çevrimdışı ipuçları çalışır. |
+| Yazılar küçük | Ayarlar → Görünüm → Yazı boyutu, ya da Ctrl + Artı. |
+
+## Ortam değişkenleri
+
+| Değişken | Ne işe yarar |
+|---|---|
+| `CPP_ADVENTURE_COMPILER` | `g++.exe` veya `clang++.exe` dosyasının tam yolu |
+| `GROQ_API_KEY` | Groq anahtarı (Ayarlar'a girmek yerine) |
+| `CPP_ADVENTURE_GROQ_MODEL`, `CPP_ADVENTURE_GROQ_FALLBACK_MODEL` | Kullanılacak Groq modelleri |
+| `CPP_ADVENTURE_ADMIN=1` | Geliştirme için test panelini açar (Ctrl + Shift + A). Dağıtılan sürümde kapalıdır. |
+| `CPP_ADVENTURE_SANDBOX=job` | AppContainer yerine yalnızca Job Object kullanır (yalnızca hata ayıklama için) |
+
+## Proje yapısı
+
+```
+server.py            Yerel HTTP sunucusu, API uç noktaları, değerlendirme
+desktop.py           Masaüstü penceresi (WebView2), tek kopya, WebView2 denetimi
+curriculum.py        Müfredat (bölüm 1–20) + modern_cpp.py (bölüm 21–24)
+mission_contracts.py Kod, hata düzeltme ve boss görevlerinin testleri
+concept_checker.py   "İstenen C++ yapısı kullanıldı mı?" denetimi
+sandbox*.py          Öğrenci kodunun güvenli derlenmesi ve çalıştırılması
+db_migrations.py     Sürümlü veritabanı yükseltmeleri ve yedekler
+ai_tutor.py          Ücretsiz Groq AI öğretmeni
+error_catalog.py     Hata kodları ve Rusça hata mesajları
+web/                 Arayüz (HTML/CSS/JS), locales.json (TR/RU metinler), Monaco editörü
+tests/               302 otomatik test
+installer/           Inno Setup betiği ve eski kurulum yardımcıları
+docs/                Raporlar ve ekran görüntüleri
+```
+
+## Belgeler
+
+| Belge | İçerik |
+|---|---|
+| [SCORES.md](SCORES.md) | Test sonuçları ve kalite puanları |
+| [docs/UX_AUDIT.md](docs/UX_AUDIT.md) | Görsel UI/UX, erişilebilirlik ve teknik denetim; önce/sonra ekran görüntüleri |
+| [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) | Modernizasyon (Faz 0–12) sonuç raporu |
+| [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md) | Aşama aşama geliştirme kaydı |
+| [DEVAM.md](DEVAM.md) | Eski Türkçe ilerleme notları |
+
+## Görseller
+
+Kedi karakterleri, maskot ve arka plan çizimleri bu proje için üretilmiştir ve `web/assets/` klasöründedir. Uygulama hiçbir görseli internetten yüklemez. Monaco editörü kendi lisansıyla `web/vendor/` altında gelir. Projenin kendisi için henüz bir lisans dosyası yoktur.

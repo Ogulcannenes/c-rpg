@@ -38,7 +38,7 @@ class TaskClarityTests(unittest.TestCase):
             with self.subTest(task=task["id"]):
                 self.assertEqual(len(task["hints"]["tr"]), 3)
                 self.assertEqual(len(task["hints"]["ru"]), 3)
-                self.assertNotIn("std::cout << \"Merhaba", " ".join(task["hints"]["tr"]))
+                self.assertNotIn("std::cout << \"Hello", " ".join(task["hints"]["tr"]))
 
 
 if __name__ == "__main__":

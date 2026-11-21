@@ -47,7 +47,7 @@ CHAPTERS = [
         "lesson": (
             "Kopyalamak pahalı olabilir: büyük bir vector'ü kopyalamak tüm elemanları çoğaltır. Taşıma (move), kaynağın sahipliğini yeni nesneye devreder; eski nesne geçerli ama içeriği belirsiz (çoğu zaman boş) kalır. std::move hiçbir şeyi taşımaz, yalnızca ifadeyi rvalue'ya çevirerek taşımaya izin verir.",
             "Копирование бывает дорогим: копия большого vector дублирует все элементы. Перемещение (move) передаёт владение ресурсом новому объекту; старый объект остаётся корректным, но с неопределённым (обычно пустым) содержимым. std::move сам ничего не перемещает — он лишь приводит выражение к rvalue и тем самым разрешает перемещение."),
-        "example": '#include <iostream>\n#include <string>\n#include <utility>\nint main() {\n    std::string a = "kedi";\n    std::string b = std::move(a); // kaynak b\'ye devredildi\n    std::cout << b;\n    return 0;\n}',
+        "example": '#include <iostream>\n#include <string>\n#include <utility>\nint main() {\n    std::string a = "cat";\n    std::string b = std::move(a); // kaynak b\'ye devredildi\n    std::cout << b;\n    return 0;\n}',
         "guide": [
             ("lvalue, rvalue ve T&&",
              "lvalue adı olan ve adresi alınabilen nesnedir; rvalue ise geçici bir değerdir (2 + 3, bir fonksiyonun döndürdüğü geçici nesne). T&& bir rvalue referansıdır: yalnızca geçicilere ya da std::move ile rvalue'ya çevrilmiş nesnelere bağlanır.",
@@ -78,7 +78,7 @@ CHAPTERS = [
         "quiz": _quiz("std::move tek başına ne yapar? (tür dönüşümü yapar / belleği kopyalar / nesneyi siler)",
                       "Что делает std::move сам по себе? (приведение типа / копирует память / удаляет объект)",
                       {"tr": "tür dönüşümü yapar", "ru": "приведение типа"}),
-        "predict": ('std::string a = "kedi";\nstd::string b = std::move(a);\nstd::cout << b << " " << b.size();', "kedi 4"),
+        "predict": ('std::string a = "cat";\nstd::string b = std::move(a);\nstd::cout << b << " " << b.size();', "cat 3"),
         "quiz2": _quiz("Taşıyıcı kurucunun parametre türü hangisidir? (T&& / const T& / T*)",
                        "Какой тип параметра у перемещающего конструктора? (T&& / const T& / T*)", "T&&"),
         "predict2": ("std::vector<int> v{1, 2, 3};\nstd::vector<int> w = std::move(v);\nv = {9};\nstd::cout << w.size() << v[0];", "39"),
@@ -91,7 +91,7 @@ CHAPTERS = [
             "n ve ardından n kelime oku, bir std::vector<std::string> içinde sakla. Vector'ü std::move ile yeni bir vector'e taşı; `yeni_boyut eski_boyut` yazdır.",
             "Прочитай n и затем n слов, сохрани их в std::vector<std::string>. Перемести vector в новый через std::move и выведи `новый_размер старый_размер`.",
             "#include <iostream>\n#include <string>\n#include <vector>\n#include <utility>\nint main() {\n    int n; std::cin >> n;\n    std::vector<std::string> kelimeler(n);\n    for (auto& k : kelimeler) std::cin >> k;\n    // kelimeler'i yeni bir vector'e taşı ve boyutları yazdır\n    return 0;\n}",
-            [("3 a b c", "3 0"), ("1 kedi", "1 0"), ("0", "0 0")], requires=["std::move"]),
+            [("3 a b c", "3 0"), ("1 cat", "1 0"), ("0", "0 0")], requires=["std::move"]),
         "practice": _code(
             "`Torba` yapısı bir std::vector<int> tutar. noexcept bir taşıyıcı kurucu yaz; her çağrıldığında statik `tasima` sayacını 1 artırsın. n sayı oku, `Torba a` oluştur, `b = std::move(a)` ve `c = std::move(b)` yap; `c'nin_toplamı a'nın_boyutu tasima` yazdır.",
             "Структура `Torba` хранит std::vector<int>. Напиши noexcept-перемещающий конструктор, который при каждом вызове увеличивает статический счётчик `tasima`. Прочитай n чисел, создай `Torba a`, сделай `b = std::move(a)` и `c = std::move(b)`; выведи `сумма_c размер_a tasima`.",
@@ -143,12 +143,12 @@ CHAPTERS = [
         "predict": ("std::optional<int> o;\nstd::cout << o.has_value() << o.value_or(7);", "07"),
         "quiz2": _quiz("std::variant<int, std::string> v = 5; için v.index() kaçtır? (0 / 1 / 2)",
                        "Чему равен v.index() для std::variant<int, std::string> v = 5;? (0 / 1 / 2)", "0"),
-        "predict2": ('std::string_view s = "kedi pati";\nstd::cout << s.substr(5) << s.size();', "pati9"),
+        "predict2": ('std::string_view s = "cat paws";\nstd::cout << s.substr(4) << s.size();', "paws8"),
         "fix": _code(
-            "Program yaşı okuyup bir fazlasını yazmalı, ama geçersiz girdide boş optional'ı okuyor. Düzelt: geçerli girdide `yaş + 1`, geçersizde `yok` yazdır.",
-            "Программа должна прочитать возраст и вывести его на 1 больше, но при неверном вводе читает пустой optional. Исправь: при верном вводе выведи `возраст + 1`, при неверном — `yok`.",
+            "Program yaşı okuyup bir fazlasını yazmalı, ama geçersiz girdide boş optional'ı okuyor. Düzelt: geçerli girdide `yaş + 1`, geçersizde `none` yazdır.",
+            "Программа должна прочитать возраст и вывести его на 1 больше, но при неверном вводе читает пустой optional. Исправь: при верном вводе выведи `возраст + 1`, при неверном — `none`.",
             "#include <iostream>\n#include <optional>\n#include <string>\nstd::optional<int> yasOku(const std::string& s) {\n    if (s.empty() || s.size() > 3 || s.find_first_not_of(\"0123456789\") != std::string::npos) return std::nullopt;\n    return std::stoi(s);\n}\nint main() {\n    std::string s; std::cin >> s;\n    std::optional<int> yas = yasOku(s);\n    std::cout << *yas + 1;\n}",
-            [("7", "8"), ("abc", "yok"), ("0", "1"), ("12a", "yok")], "vocabulary_types", bug_type="logic"),
+            [("7", "8"), ("abc", "none"), ("0", "1"), ("12a", "none")], "vocabulary_types", bug_type="logic"),
         "warm": _code(
             "Bir kelime oku. `std::optional<char> ilkSesli(std::string_view s)` yaz: ilk sesli harfi (a, e, i, o, u) döndürsün, yoksa std::nullopt. Harfi ya da `-` yazdır.",
             "Прочитай слово. Напиши `std::optional<char> ilkSesli(std::string_view s)`: пусть возвращает первую гласную (a, e, i, o, u) или std::nullopt. Выведи букву или `-`.",
@@ -160,10 +160,10 @@ CHAPTERS = [
             "#include <iostream>\n#include <string>\n#include <variant>\n#include <vector>\nint main() {\n    int n; std::cin >> n;\n    std::vector<std::variant<int, std::string>> ogeler;\n    // belirteçleri oku, türüne göre sakla, sonra say\n    return 0;\n}",
             [("4 3 kedi 5 pati", "8 2"), ("2 -4 mavi", "-4 1"), ("0", "0 0")], "vocabulary_types"),
         "boss": _code(
-            "Boss: ilk satırda `anahtar=değer;anahtar=değer` biçiminde bir ayar metni, sonra q ve q anahtar gelir. `std::optional<std::string_view> deger(std::string_view metin, std::string_view anahtar)` yaz; metni kopyalamadan tam eşleşen anahtarın değerini bulsun. Her anahtar için değeri ya da `yok` yazdır, her biri ayrı satırda.",
-            "Босс: в первой строке — настройки вида `ключ=значение;ключ=значение`, затем q и q ключей. Напиши `std::optional<std::string_view> deger(std::string_view metin, std::string_view anahtar)`, который без копирования находит значение точно совпадающего ключа. Для каждого ключа выведи значение или `yok`, каждое с новой строки.",
+            "Boss: ilk satırda `anahtar=değer;anahtar=değer` biçiminde bir ayar metni, sonra q ve q anahtar gelir. `std::optional<std::string_view> deger(std::string_view metin, std::string_view anahtar)` yaz; metni kopyalamadan tam eşleşen anahtarın değerini bulsun. Her anahtar için değeri ya da `none` yazdır, her biri ayrı satırda.",
+            "Босс: в первой строке — настройки вида `ключ=значение;ключ=значение`, затем q и q ключей. Напиши `std::optional<std::string_view> deger(std::string_view metin, std::string_view anahtar)`, который без копирования находит значение точно совпадающего ключа. Для каждого ключа выведи значение или `none`, каждое с новой строки.",
             "#include <iostream>\n#include <optional>\n#include <string>\n#include <string_view>\n// deger fonksiyonunu yaz\nint main() {\n    std::string ayar; std::getline(std::cin, ayar);\n    int q; std::cin >> q;\n    // her anahtarı oku ve sonucu yazdır\n    return 0;\n}",
-            [("ad=Luna;yas=3;renk=gri\n3\nyas\nrenk\nboy", "3\ngri\nyok"), ("renkad=x;ad=Luna\n1\nad", "Luna"), ("kedi=pati;pati=kedi\n2\npati\nkedi", "kedi\npati")], "string_view_parse"),
+            [("name=Luna;age=3;color=grey\n3\nage\ncolor\nsize", "3\ngrey\nnone"), ("colorname=x;name=Luna\n1\nname", "Luna"), ("cat=paw;paw=cat\n2\npaw\ncat", "cat\npaw")], "string_view_parse"),
     },
     # ------------------------------------------------------------------ c23
     {

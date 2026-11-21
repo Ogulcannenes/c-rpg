@@ -26,15 +26,15 @@ VALID_CONCEPT_EXAMPLES = {
 }
 
 PRACTICE_SOLUTIONS = [
-    '#include <iostream>\nint main(){std::cout<<"C++ ADVENTURE\\nMerhaba, C++!\\nMacera başlıyor!";}',
+    '#include <iostream>\nint main(){std::cout<<"C++ ADVENTURE\\nHello, C++!\\nAdventure begins!";}',
     '#include <iostream>\n#include <string>\nint main(){std::string name="Pati";int paws=4;std::cout<<name<<" "<<paws;}',
     '#include <iostream>\nint main(){int n;std::cin>>n;std::cout<<n*2;}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+2*b;}',
-    '#include <iostream>\nint main(){int score;std::cin>>score;if(score>=50)std::cout<<"Gecti";else std::cout<<"Tekrar";}',
+    '#include <iostream>\nint main(){int score;std::cin>>score;if(score>=50)std::cout<<"Passed";else std::cout<<"Retry";}',
     '#include <iostream>\nint main(){int n;std::cin>>n;for(int i=1;i<=n;++i){if(i>1)std::cout<<" ";std::cout<<i;}}',
     '#include <iostream>\nint ikiKat(int n){return n*2;}int main(){int n;std::cin>>n;std::cout<<ikiKat(n);}',
     '#include <iostream>\n#include <vector>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int& x:v)std::cin>>x;int sum=0;for(int x:v)sum+=x;std::cout<<sum;}',
-    '#include <iostream>\n#include <string>\nint main(){std::string name;std::getline(std::cin,name);std::cout<<"Merhaba "<<name;}',
+    '#include <iostream>\n#include <string>\nint main(){std::string name;std::getline(std::cin,name);std::cout<<"Hello "<<name;}',
     '#include <iostream>\nint main(){int value;std::cin>>value;int& alias=value;++alias;std::cout<<value;}',
     '#include <iostream>\n#include <string>\nstruct Kedi{std::string ad;int yas;};int main(){std::string ad;int yas;std::cin>>ad>>yas;Kedi k{ad,yas};std::cout<<k.ad<<" "<<k.yas;}',
     '#include <iostream>\nclass Hero{int power;public:Hero(int p):power(p){}int boosted(){return power+2;}};int main(){int p;std::cin>>p;Hero h(p);std::cout<<h.boosted();}',
@@ -44,17 +44,17 @@ PRACTICE_SOLUTIONS = [
 ]
 
 BOSS_SOLUTIONS = [
-    '#include <iostream>\nint main(){std::cout<<"=== KEDI GUILD ===\\nMerhaba, gezgin!\\nKodun gücü seninle!";}',
+    '#include <iostream>\nint main(){std::cout<<"=== CAT GUILD ===\\nHello, traveler!\\nMay the code be with you!";}',
     '#include <iostream>\n#include <string>\nint main(){std::string name="Luna";int potions=3;double strength=2.5;std::cout<<name<<" "<<potions<<" "<<strength;}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b<<"\\n"<<a*b;}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<(a+b)*(a-b);}',
-    '#include <iostream>\nint main(){int p;std::cin>>p;if(p>=80)std::cout<<"Usta";else if(p>=50)std::cout<<"Gezgin";else std::cout<<"Cirak";}',
+    '#include <iostream>\nint main(){int p;std::cin>>p;if(p>=80)std::cout<<"Master";else if(p>=50)std::cout<<"Explorer";else std::cout<<"Apprentice";}',
     '#include <iostream>\nint main(){int n;std::cin>>n;int sum=0;for(int i=2;i<=n;i+=2)sum+=i;std::cout<<sum;}',
     '#include <iostream>\nint gorevPuani(int a,int b,int c){return a+2*b-c;}int main(){int a,b,c;std::cin>>a>>b>>c;std::cout<<gorevPuani(a,b,c);}',
     '#include <iostream>\n#include <vector>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int& x:v)std::cin>>x;int best=v[0];for(int x:v)if(x>best)best=x;std::cout<<best;}',
     '#include <iostream>\n#include <string>\nint main(){std::string a,b;std::cin>>a>>b;std::string full=a+" "+b;std::cout<<full<<" "<<full.size();}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;int& left=a;int& right=b;int temp=left;left=right;right=temp;std::cout<<a<<" "<<b;}',
-    '#include <iostream>\n#include <string>\nstruct Quest{std::string name;int xp;bool done;};int main(){std::string n;int xp,done;std::cin>>n>>xp>>done;Quest q{n,xp,done==1};std::cout<<q.name<<" "<<q.xp<<" "<<(q.done?"Tamam":"Acik");}',
+    '#include <iostream>\n#include <string>\nstruct Quest{std::string name;int xp;bool done;};int main(){std::string n;int xp,done;std::cin>>n>>xp>>done;Quest q{n,xp,done==1};std::cout<<q.name<<" "<<q.xp<<" "<<(q.done?"Done":"Open");}',
     '#include <iostream>\nclass Hero{int power;public:Hero(int p):power(p){}int train(int bonus){return power+bonus;}};int main(){int p,b;std::cin>>p>>b;Hero h(p);std::cout<<h.train(b);}',
     '#include <iostream>\n#include <vector>\n#include <algorithm>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int& x:v)std::cin>>x;std::sort(v.begin(),v.end());std::cout<<v.front()<<" "<<v.back();}',
     '#include <iostream>\n#include <fstream>\n#include <stdexcept>\nint main(){int n;std::cin>>n;try{std::ofstream o("scores.txt");if(!o)throw std::runtime_error("io");for(int i=0;i<n;++i){int x;std::cin>>x;o<<x<<" ";}o.close();std::ifstream in("scores.txt");if(!in)throw std::runtime_error("io");int sum=0,x;while(in>>x)sum+=x;std::cout<<sum;}catch(...){std::cout<<"error";}}',
@@ -62,15 +62,15 @@ BOSS_SOLUTIONS = [
 ]
 
 FIX_SOLUTIONS = [
-    '#include <iostream>\nint main(){std::cout<<"C++ ADVENTURE\\nMerhaba, C++!\\nMacera başlıyor!";}',
-    '#include <iostream>\n#include <string>\nint main(){int yas=7;std::string ad="Mırmır";std::cout<<ad<<" "<<yas;}',
+    '#include <iostream>\nint main(){std::cout<<"C++ ADVENTURE\\nHello, C++!\\nAdventure begins!";}',
+    '#include <iostream>\n#include <string>\nint main(){int yas=7;std::string ad="Purr";std::cout<<ad<<" "<<yas;}',
     '#include <iostream>\nint main(){int n;std::cin>>n;std::cout<<n*2;}',
     '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<(a+b)*2;}',
-    '#include <iostream>\nint main(){int puan;std::cin>>puan;if(puan>=50)std::cout<<"Gecti";else std::cout<<"Tekrar";}',
+    '#include <iostream>\nint main(){int puan;std::cin>>puan;if(puan>=50)std::cout<<"Passed";else std::cout<<"Retry";}',
     '#include <iostream>\nint main(){int n;std::cin>>n;for(int i=1;i<=n;++i){if(i>1)std::cout<<" ";std::cout<<i;}}',
     '#include <iostream>\nint ikiKat(int x){return x*2;}int main(){int n;std::cin>>n;std::cout<<ikiKat(n);}',
     '#include <iostream>\n#include <vector>\nint main(){int n;std::cin>>n;std::vector<int> v(n);for(int& x:v)std::cin>>x;int s=0;for(int x:v)s+=x;std::cout<<s;}',
-    '#include <iostream>\n#include <string>\nint main(){std::string name;std::cin>>name;std::cout<<"Merhaba "<<name;}',
+    '#include <iostream>\n#include <string>\nint main(){std::string name;std::cin>>name;std::cout<<"Hello "<<name;}',
     '#include <iostream>\nint main(){int value;std::cin>>value;int& ref=value;++ref;std::cout<<value;}',
     '#include <iostream>\n#include <string>\nstruct Kedi{std::string ad;int yas;};int main(){std::string ad;int yas;std::cin>>ad>>yas;Kedi k{ad,yas};std::cout<<k.ad<<" "<<k.yas;}',
     '#include <iostream>\nclass Hero{int power;public:Hero(int p):power(p){}int boosted(){return power+2;}};int main(){int p;std::cin>>p;Hero h(p);std::cout<<h.boosted();}',
