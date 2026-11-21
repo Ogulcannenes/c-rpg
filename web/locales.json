@@ -2401,6 +2401,30 @@
         "statusLocked": "Закрыто",
         "lockedHint": "Сначала пройди эти главы"
       }
+    },
+    "skillTree": {
+      "tr": {
+        "title": "Yetenek ağacı",
+        "lead": "Oklar bölümlerin ön koşullarını gösterir. Bir bölüm, ona gelen tüm oklar tamamlanınca açılır.",
+        "done": "tamamlandı",
+        "open": "açık",
+        "locked": "kilitli",
+        "requires": "Ön koşullar",
+        "startHere": "Buradan başla",
+        "lockedHint": "Önce şu bölümleri tamamla",
+        "details": "Bölüm ayrıntıları"
+      },
+      "ru": {
+        "title": "Дерево навыков",
+        "lead": "Стрелки показывают предварительные условия глав. Глава открывается, когда пройдены все ведущие к ней главы.",
+        "done": "пройдено",
+        "open": "открыто",
+        "locked": "закрыто",
+        "requires": "Нужно пройти",
+        "startHere": "Начни отсюда",
+        "lockedHint": "Сначала пройди эти главы",
+        "details": "Подробности глав"
+      }
     }
   }
 }
