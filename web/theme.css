@@ -114,7 +114,10 @@ button.primary:hover:not(:disabled), .primary:hover:not(:disabled) { background:
 }
 .dash-ring b { color: var(--ds-text); font-size: var(--ds-text-xl); }
 .dash-companion { flex-direction: row; align-items: center; }
-.dash-cat { width: 110px; flex: none; }
+.dash-cat { width: 132px; flex: none; overflow: hidden; }
+.dash-cat .cat-stage { width: 100% !important; max-width: 100%; }
+.dash-card > .dash-row:first-child { margin-top: 0; }
+.dash-card h3.dash-eyebrow { font-size: var(--ds-text-xs); color: var(--ds-accent); }
 .dash-badges, .dash-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ds-space-2); }
 .dash-badges li { display: flex; align-items: center; gap: var(--ds-space-2); color: var(--ds-text); }
 .dash-badges li span { font-size: 22px; }
