@@ -4,15 +4,21 @@ Windows 11 için çevrimdışı kullanılabilen, Türkçe/Rusça C++ öğrenme m
 
 ## Hızlı başlatma
 
-Önceden paketlenmiş uygulama `dist-stage29-cat-growth-stage3/CppAdventure/CppAdventure.exe` dosyasıdır; `start.bat` onu açar. Bu paket 2026-11-19 güvenlik ve müfredat güncellemelerinden ÖNCEKİ kodu içerir. Yeni kodu hemen denemek için proje klasöründe `.venv\bin\python.exe desktop.py` çalıştırın veya aşağıdaki gibi yeniden paketleyin. Eski sürüm klasörleri silinmiştir.
+Kaynak koddan çalıştırmak için `start-desktop.bat` dosyasını açın. Varsa `dist\CppAdventure\CppAdventure.exe` derlemesini, yoksa proje içindeki `.venv` ile `desktop.py`'yi başlatır. Eski `dist-stage…` klasörlerine artık bakılmaz; bu klasörler silinmedi, isterseniz elle kaldırabilirsiniz.
 
-Kaynak koddan yeniden paketlemek için:
+### Windows paketi ve kurulum (sürüm 0.5.0)
 
-1. Windows 11, Python 3.10+, G++ (MSYS2 UCRT64 önerilir) ve WebView2 Runtime gerektiğini doğrulayın.
-2. `build-windows.bat` dosyasını çalıştırın. İlk paketlemede `pywebview` ve `PyInstaller` proje içindeki `.venv` ortamına kurulur; bunun için internet gerekir.
-3. Uygulama `dist/CppAdventure/CppAdventure.exe`, kullanıcı hesabına kurulum dosyası `dist/C++Adventure-Setup.exe` konumuna çıkar.
+1. Windows 11, Python 3.10+, G++ (MSYS2 UCRT64 önerilir) ve WebView2 Runtime gerekir.
+2. `build-windows.bat` dosyasını çalıştırın. İlk çalıştırmada `requirements-desktop.lock.txt` içindeki tam sürümler `.venv` ortamına kurulur; bunun için internet gerekir.
+3. Uygulama `dist\CppAdventure\CppAdventure.exe` konumuna çıkar. Exe dosyası sürüm bilgisini taşır ve UPX ile sıkıştırılmaz (virüs programlarının yanlış alarmını azaltmak için).
+4. Kurulum dosyası:
+   - **Inno Setup 6 kuruluysa** `dist\C++Adventure-Setup-0.5.0.exe` oluşur. Yönetici izni gerekmez ve kullanıcının hesabına kurulur. Türkçe ve Rusça kurulum ekranı vardır. Uygulama açıksa kapatılması istenir. WebView2 yoksa uyarılır. Denetim Masası'ndan kaldırılabilir. Kaldırma, sandbox AppContainer profilini de siler; **profiller, ilerleme ve yedekler (`%LOCALAPPDATA%\CppAdventure`) silinmez.**
+   - Inno Setup yoksa eski tek dosyalık kurulum (`dist\C++Adventure-Setup.exe`) oluşur. Bunun kaldırma aracı yoktur.
+5. Dosyalar **kod imzalı değildir** (imza sertifikası yok); Windows SmartScreen ilk açılışta uyarı gösterebilir.
 
-Normal uygulama kullanımı için Python, Node.js, npm veya internet bağlantısı gerekmez. G++ kod derleme için gereklidir. WebView2 Runtime Windows 11 bilgisayarında bulunmalıdır.
+Uygulama aynı Windows kullanıcısı için tek kopya çalışır: ikinci kez açılınca açık pencere öne gelir. WebView2 yoksa uygulama, ücretsiz kurulum bağlantısını Türkçe ve Rusça gösterip kapanır. G++ PATH'te değilse `C:\msys64` altındaki MSYS2 kurulumları da aranır; başka bir konum için `CPP_ADVENTURE_COMPILER` ortam değişkenine derleyicinin tam yolunu yazın.
+
+Normal uygulama kullanımı için Python, Node.js, npm veya internet bağlantısı gerekmez (yalnızca isteğe bağlı AI öğretmen internet kullanır). G++ kod derleme için gereklidir.
 
 ## En son görsel güncelleme
 

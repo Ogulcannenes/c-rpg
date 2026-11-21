@@ -1,39 +1,8 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+rem Development launcher. The installed app is started from its Start menu shortcut instead.
 if exist "%~dp0data\adventure.db" set "CPP_ADVENTURE_LEGACY_DB=%~dp0data\adventure.db"
-if exist "dist-stage29-cat-growth-stage3\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage29-cat-growth-stage3\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage29-cat-visual-stage2\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage29-cat-visual-stage2\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage29-phase1\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage29-phase1\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage28-cat-crew\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage28-cat-crew\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage28\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage28\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage27\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage27\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-stage26\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-stage26\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
-if exist "dist-audit-final\CppAdventure\CppAdventure.exe" (
-  start "" "%~dp0dist-audit-final\CppAdventure\CppAdventure.exe"
-  exit /b 0
-)
 if exist "dist\CppAdventure\CppAdventure.exe" (
   start "" "%~dp0dist\CppAdventure\CppAdventure.exe"
   exit /b 0

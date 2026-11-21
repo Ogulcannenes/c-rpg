@@ -251,6 +251,17 @@ def appcontainer_error() -> str | None:
     return _AC_STATE["error"]
 
 
+DeleteAppContainerProfile = _proto(userenv, "DeleteAppContainerProfile", ctypes.c_long, wintypes.LPCWSTR)
+HRESULT_FILE_NOT_FOUND = 0x80070002
+
+
+def remove_appcontainer_profile() -> bool:
+    """Uninstall helper: delete the sandbox profile. Its folder only holds temporary program runs,
+    never profiles or progress. True if it was removed or did not exist."""
+    hr = DeleteAppContainerProfile(APPCONTAINER_NAME) & 0xFFFFFFFF
+    return hr in (0, HRESULT_FILE_NOT_FOUND)
+
+
 def _sweep_stale_runs(runs: Path, max_age: float = 3600) -> None:
     cutoff = time.time() - max_age
     for entry in runs.iterdir():

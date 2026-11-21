@@ -412,3 +412,32 @@ list changed several times in 2026, so it was not added as a second provider.
 - Tests: `tests/test_phase10_a11y_i18n.py` (8 tests). It includes a Node run of the real `trapFocus` and a guard that every new Turkish-only server error needs a catalog entry. `test_architecture` now also checks the split fields.
 - Full suite: 278 tests. 277 passed on the full run; the one exact-match test was then updated and passes.
 - Screen-reader testing with NVDA/JAWS was not done; the checks are structural and keyboard-level.
+
+## Phase 11 — Windows packaging (2026-11-21)
+
+- Evaluation:
+  - Inno Setup 6 was chosen for the real installer: per-user, no admin rights, TR/RU wizard, uninstaller, AppMutex.
+  - MSIX was not chosen. It needs a signing certificate to install outside developer mode, and it virtualises `%LOCALAPPDATA%`, which would hide the existing profiles.
+  - Inno Setup is **not installed on this machine**, so the `.iss` was written but **not compiled here**. `build-windows.bat` uses ISCC when present and otherwise falls back to the previous self-extracting setup.
+- `desktop.py`:
+  - Single instance through the named mutex `Local\CppAdventure.SingleInstance`; a second launch focuses the running window and exits.
+  - WebView2 runtime check (HKLM/WOW6432Node/HKCU `pv`) with a TR/RU message and download link.
+  - `--remove-sandbox-profile` for the uninstaller (`DeleteAppContainerProfile`; the profile holds only temporary runs).
+  - `main()` returns exit codes.
+- `server.find_compiler`: `CPP_ADVENTURE_COMPILER` → PATH → `C:\msys64\{ucrt64,mingw64,clang64}` and similar. An MSYS2 folder found this way is put on PATH so cc1plus finds its DLLs.
+- Legacy DB pointer: the source must be absolute and start with the SQLite header. It is opened read-only (`mode=ro`) and whitespace is trimmed.
+- Build:
+  - `CppAdventure.spec`: `upx=False`, version resource from `APP_VERSION` (bumped to **0.5.0**), and tkinter/unittest/pydoc excluded.
+  - `requirements-desktop.txt` pins the direct dependencies; `requirements-desktop.lock.txt` holds exact transitive versions, and `setup-desktop.bat` installs from it.
+  - `installer/app_version.py`.
+- `start-desktop.bat` no longer cascades through stale `dist-stage*` builds. The old folders were not deleted.
+- Verified on this Windows 11 machine:
+  - A PyInstaller build to a scratch folder succeeded (66.8 MB). The exe reports FileVersion 0.5.0.
+  - Launched with a throwaway `LOCALAPPDATA`, the window opened. A second launch exited in 0.5 s and the log shows "focusing the running window". The window then closed normally.
+  - With MSYS2 removed from PATH, a program compiled and printed the right output.
+- Not verified:
+  - The Inno installer itself (no ISCC).
+  - Uninstall.
+  - Code signing: no certificate, so files are unsigned and SmartScreen may warn.
+  - The project's `dist\` was not rebuilt.
+- Tests: `tests/test_phase11_desktop.py` (17 tests). Full suite: **293 tests OK** (256 s).

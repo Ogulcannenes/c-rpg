@@ -51,7 +51,37 @@ ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 DATA_ROOT = (Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "CppAdventure") if getattr(sys, "frozen", False) else ROOT
 DB_PATH = DATA_ROOT / "data" / "adventure.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-COMPILER = shutil.which("g++") or shutil.which("clang++")
+MSYS2_ROOTS = (r"C:\msys64", r"C:\tools\msys64", r"D:\msys64")
+MSYS2_ENVIRONMENTS = ("ucrt64", "mingw64", "clang64")
+
+
+def find_compiler(environ=None, roots=MSYS2_ROOTS):
+    """g++/clang++ from CPP_ADVENTURE_COMPILER, PATH, or a standard MSYS2 install.
+
+    Beginners often install MSYS2 without adding it to PATH. When the compiler comes from an
+    MSYS2 folder, that folder is put at the front of PATH: cc1plus, as and ld load their DLLs from it.
+    """
+    environ = os.environ if environ is None else environ
+    override = environ.get("CPP_ADVENTURE_COMPILER", "").strip().strip('"')
+    if override and Path(override).is_file():
+        found = Path(override)
+    else:
+        on_path = shutil.which("g++", path=environ.get("PATH")) or shutil.which("clang++", path=environ.get("PATH"))
+        if on_path:
+            return on_path
+        candidates = [Path(root) / env / "bin" / name
+                      for root in (environ.get("MSYS2_ROOT", ""), *roots) if root
+                      for env in MSYS2_ENVIRONMENTS for name in ("g++.exe", "clang++.exe")]
+        found = next((path for path in candidates if path.is_file()), None)
+        if found is None:
+            return None
+    folder = str(found.parent)
+    if folder.lower() not in [part.lower() for part in environ.get("PATH", "").split(os.pathsep)]:
+        environ["PATH"] = folder + os.pathsep + environ.get("PATH", "")
+    return str(found)
+
+
+COMPILER = find_compiler()
 DB_LOCK = threading.Lock()
 MAX_SOURCE = 20_000
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -91,7 +121,7 @@ def save_provider_key(provider, key):
     write_secret(SECRETS_DIR, spec["file"], key)
 
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 
 
 @contextmanager
@@ -163,9 +193,16 @@ def db(immediate=False):
 
 def migrate_legacy_database(source_path, target_path=None):
     """Copy existing profile data into the desktop app's data folder without replacing progress."""
-    source = Path(source_path).expanduser()
+    source = Path(str(source_path).strip()).expanduser()
     target = Path(target_path or DB_PATH)
-    if not source.is_file() or source.resolve() == target.resolve():
+    # The pointer file comes from the installer; accept only an absolute path to a real SQLite file.
+    if not source.is_absolute() or not source.is_file() or source.resolve() == target.resolve():
+        return False
+    try:
+        with source.open("rb") as handle:
+            if handle.read(16) != b"SQLite format 3\x00":
+                return False
+    except OSError:
         return False
 
     def profile_count(connection):
@@ -174,7 +211,7 @@ def migrate_legacy_database(source_path, target_path=None):
 
     old_db = current_db = None
     try:
-        old_db = sqlite3.connect(str(source), timeout=10)
+        old_db = sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)  # never write to the old copy
         if profile_count(old_db) == 0:
             return False
         current_profiles = 0

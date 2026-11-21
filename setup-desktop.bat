@@ -17,7 +17,7 @@ if not defined CPP_PY (
 )
 "%CPP_PY%" -m pip install --upgrade pip
 if errorlevel 1 exit /b 1
-"%CPP_PY%" -m pip install -r requirements-desktop.txt
+"%CPP_PY%" -m pip install -r requirements-desktop.lock.txt
 if errorlevel 1 exit /b 1
 echo Masaustu bagimliliklari hazir.
 endlocal
