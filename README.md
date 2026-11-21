@@ -38,9 +38,8 @@ Kedi dükkânında yerel SVG katmanlarıyla baş, kulak, boyun, gövde, sırt ve
 - Her bölümün 4. kodlama görevi ile Boss Challenge'ı farklı senaryo, başlangıç kodu ve test girdilerine sahiptir. Boss'lar ayrıca daha kapsamlı, birden fazla girdiye dayalı görevlerdir.
 - Kod editöründe öneriler C++ için hazırlanmış snippet’lerden gelir; sıradan kelime tamamlamaları kapalıdır. `Tab` ile seçili öneriyi ekleyin. `Ctrl+S` kayıt/yedekleme ekranını açar.
 - Uygulama içindeki Çalıştır panelinde girdi alanını açıp program başlamadan önce bir veya birden fazla satır girebilirsiniz. Derleme durumu, stdout, program stderr’i, derleyici mesajları, çıkış kodu ve geçen süre ayrı gösterilir; derleme/çalıştırma için CMD penceresi açılmaz.
-- Hata alınca test adı, beklenen ve alınan çıktı ile yerel derleyici açıklaması gösterilir. Ayarlardan çevrimdışı, Ollama, OpenAI veya AI kapalı seçilebilir.
-- OpenAI’ye kod göndermek için her tanılama isteğinde ayrıca onay gerekir. API anahtarı `OPENAI_API_KEY` ortam değişkeninden okunur, veritabanına veya kaynak koda yazılmaz. Kodun yanı sıra görev metni ve sınırlı quiz geçmişi de onay ekranında açıklanır.
-- Ollama yerel adreste aranır (`127.0.0.1:11434`). Kurulu model yoksa ayarlar ekranı çevrimdışı tanılamaya devam eder.
+- Hata alınca test adı, beklenen ve alınan çıktı ile yerel derleyici açıklaması gösterilir. Ayarlardan ücretsiz çevrimiçi AI (Groq), çevrimdışı ipuçları veya AI kapalı seçilebilir.
+- Groq'a kod göndermek için her tanılama isteğinde ayrıca onay gerekir. Kodun yanı sıra görev metni, derleyici/test raporu ve sınırlı quiz geçmişi gönderilir; isim, profil kimliği ve gizli testler gönderilmez.
 - Kayıt menüsü JSON dışa/içe aktarma ve manuel yedeklemeyi içerir. Veriler otomatik olarak kaydedilir.
 - Öğrenme günlüğü her doğru/yanlış görev denemesini profil bazında kaydeder; konu başarısını, tekrar önerilerini ve son denemeleri gösterir. Günlük kayıtları JSON yedeklerine de dahil edilir.
 - Kod laboratuvarında kaynak kod için yerel okunabilirlik sezgiselleri bulunur. Code Golf karşılaştırması iki çözümü aynı girdiyle gerçek G++ üzerinden derleyip çıktıları, kod boyutlarını ve yaklaşık derleme+çalışma sürelerini yan yana gösterir. Süre ölçümü algoritmik karmaşıklık analizi değildir.
@@ -78,21 +77,16 @@ Kedi dükkânında yerel SVG katmanlarıyla baş, kulak, boyun, gövde, sırt ve
 
 ## Ücretsiz AI öğretmen (Groq)
 
-Hiçbir şey indirmeden ve ödeme yapmadan AI ipucu almak için:
+AI öğretmen yalnızca **Groq'un ücretsiz planını** kullanır: internet bağlantısı gerekir, bilgisayara model indirilmez ve hiçbir zaman ücret alınmaz. Yerel (Ollama) ve ücretli (OpenAI, Claude) seçenekler kaldırıldı; bu seçenekleri kullanan profiller otomatik olarak Groq'a geçirildi.
 
-1. console.groq.com adresinde ücretsiz hesap aç (kredi kartı gerekmez) ve **API Keys** bölümünden bir anahtar oluştur (`gsk_` ile başlar).
-2. Uygulamada ⚙ Ayarlar > AI öğretmen sağlayıcısı > **Groq API anahtarı** kutusuna yapıştırıp **Anahtarı kaydet**'e bas. AI öğretmen otomatik olarak Groq'a geçer.
+1. https://console.groq.com/keys adresinde ücretsiz hesap aç (kredi kartı gerekmez) ve bir API anahtarı oluştur (`gsk_` ile başlar).
+2. Uygulamada ⚙ Ayarlar > AI öğretmen sağlayıcısı > **Groq API anahtarı** kutusuna yapıştırıp **Anahtarı kaydet**'e bas. Anahtar kaydedilirken token harcamadan sınanır; AI öğretmen otomatik olarak Groq'a geçer. **Anahtarı sına** ile daha sonra da kontrol edebilirsin.
 
-- Model `openai/gpt-oss-120b`; günlük ücretsiz sınır dolarsa `openai/gpt-oss-20b` denenir, o da doluysa çevrimdışı ipuçları gösterilir. Ücretsiz sınır aşıldığında para kesilmez.
-- Anahtar Claude anahtarıyla aynı yerde (`%LOCALAPPDATA%\CppAdventure\secrets`) saklanır. `GROQ_API_KEY` ortam değişkeni de kullanılabilir.
-
-## Claude ile AI öğretmen
-
-Ayarlar (⚙) > AI öğretmen sağlayıcısı bölümünde Claude API anahtarını gir ve **Anahtarı kaydet**'e bas. Anahtar kaydedilince profilin AI öğretmeni Claude olur.
-
-- Ucuz ve hızlı `claude-haiku-5-5` modeli kullanılır; yanıt en fazla 450 token ile sınırlıdır. Başka model için `CPP_ADVENTURE_CLAUDE_MODEL` ortam değişkeni kullanılabilir.
-- Anahtar `%LOCALAPPDATA%\CppAdventure\secrets` içinde saklanır; proje klasörüne, veritabanına ve kayıt dosyasına yazılmaz. İstersen `ANTHROPIC_API_KEY` ortam değişkenini de kullanabilirsin.
-- Kod yalnızca her istekte onay verirsen gönderilir; tam çözüm değil, ipucu istenir.
+- Model `openai/gpt-oss-120b`; sınır dolarsa ya da model kaldırılmışsa `openai/gpt-oss-20b` denenir, o da olmazsa çevrimdışı ipuçları gösterilir. Ücretsiz sınır aşıldığında Groq ücret almaz, yalnızca bir süre yanıt vermez. Modeller `CPP_ADVENTURE_GROQ_MODEL` ve `CPP_ADVENTURE_GROQ_FALLBACK_MODEL` ile değiştirilebilir.
+- İpucu üç seviyelidir: önce yön gösterir, **Daha ayrıntılı ipucu** ile hatalı satırı işaret eder, üçüncü seviyede adım adım anlatır. Tam çözüm hiçbir seviyede yazılmaz.
+- Yanıt dili her zaman arayüz dilidir (Türkçe veya Rusça). Öğrenci kodu "güvenilmeyen veri" olarak işaretlenir; koda yazılan "kuralları unut" gibi talimatlar dikkate alınmaz.
+- Anahtar yoksa, internet yoksa, anahtar reddedilirse ya da sınır dolarsa uygulama çevrimdışı ipucunu gösterir ve nedenini Türkçe/Rusça açıklar.
+- Anahtar `%LOCALAPPDATA%\CppAdventure\secrets` içinde (Windows'ta DPAPI ile şifreli) saklanır; proje klasörüne, veritabanına, kayıt dosyasına ve sayfaya gönderilmez. `GROQ_API_KEY` ortam değişkeni de kullanılabilir.
 
 ## Test paneli
 

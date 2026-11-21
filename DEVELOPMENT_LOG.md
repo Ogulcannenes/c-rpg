@@ -361,3 +361,37 @@ Claude Code because the machine ran critically low on memory — not a test fail
   0/192 tasks, 0/24 chapters; hint buttons fetch text from the server in order.
 - Not done: C++23 topics (`std::expected`, `std::print`) — the bundled GCC must be checked first;
   multi-file projects.
+
+## Phase 9 — Free online AI tutor (2026-11-21)
+
+User requirement: the AI must be free and online-only, with no local model. Choice: **Groq free plan**
+(no credit card; answers HTTP 429 instead of charging; already integrated). Gemini's free model
+list changed several times in 2026, so it was not added as a second provider.
+
+- New `ai_tutor.py`:
+  - Groq request, a 3-level hint policy and a system prompt that names the answer language
+    explicitly (Turkish/Russian).
+  - Learner code and input go inside `<learner_code>`/`<program_input>` tags and are declared
+    untrusted. The code cannot close its own tag (escaped).
+  - Error taxonomy (`unconfigured`, `rate_limited`, `auth`, `network`, `server`, `bad_response`,
+    `disabled`) with TR/RU messages. `ask_groq` never raises.
+  - Model fallback `gpt-oss-120b → gpt-oss-20b` on 429 and on 400/404 (retired model).
+  - `check_key` verifies a key through the free model list, with no tokens spent.
+- Removed: Ollama (local), OpenAI and Claude (paid). This covers the code paths, settings options,
+  key rows, locale strings, `/api/ai/claude-key` and `tests/test_claude_ai.py`. Migration 5 moves
+  profiles that used them to `groq`; import maps them the same way. Old `ai_usage` history rows
+  are kept. A saved Claude key file is left on disk untouched (user data) and is no longer read.
+- Endpoints:
+  - `/api/ai/diagnose` takes `hint_level` 1–3. Consent is still required for every request.
+  - Hidden tests, the profile id and the name are never sent. Only the visible example output is.
+  - Usage records tokens/requests with cost 0.
+  - New `POST /api/ai/check`; `/api/ai/key` takes `verify`.
+- UI:
+  - Settings offer Groq (free) / offline / off; key check button; "Ücretsiz" instead of cost.
+  - The diagnosis card shows the hint level, a "Daha ayrıntılı ipucu" button and the model name.
+  - Fixed `chapterIcon` capping at 20, which hid the c21–c24 icons.
+- Tests: `tests/test_phase9_ai_tutor.py` (13 tests; no real network): provider policy, prompt
+  framing, tag escape, error codes, fallback, key check, endpoint flows, migration.
+  Full suite: **270 tests OK** (257 s).
+- Not verified: a real request to Groq (no key on this machine; the user creates a free key at
+  console.groq.com/keys). Free-plan limits are set per account and can change; see the Groq console.

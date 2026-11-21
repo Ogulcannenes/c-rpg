@@ -39,6 +39,7 @@ from workshop_projects import extend_projects, TEMPLATES as WORKSPACE_TEMPLATES
 from devtools import initial_state as initial_devtool_state, apply as apply_devtool_action
 from learning_engine import learning_insights
 from project_workshop import validate_files as validate_project_files, build_project as build_project_workspace, resolve_cmake
+import ai_tutor
 from career_system import CAREER_LEVELS, INTERVIEW_BANK, career_summary, select_interview_questions
 from rpg_system import SECRET_QUESTS, guild_summary, quest_by_id
 from advanced_cpp import assembly_outputs, simulate_counter
@@ -58,24 +59,12 @@ POST_BODY_LIMITS = {
     "/api/plugins/install": MAX_PLUGIN_BYTES + 2048,  # manifest + JSON envelope
     "/api/import": 8 * 1024 * 1024,  # a full save: code, workspaces, up to 5,000 learning events
 }
-OPENAI_MODEL = os.environ.get("CPP_ADVENTURE_OPENAI_MODEL", "gpt-6-astra")
-OLLAMA_URL = os.environ.get("CPP_ADVENTURE_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-OLLAMA_MODEL = os.environ.get("CPP_ADVENTURE_OLLAMA_MODEL", "qwen2.5-coder:3b")
-# Claude: the small, inexpensive Haiku model is enough for short tutoring hints.
-CLAUDE_MODEL = os.environ.get("CPP_ADVENTURE_CLAUDE_MODEL", "claude-haiku-5-5")
-CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50)}  # USD per million input/output tokens (prompts up to 100k tokens)
 # The key lives outside the project and outside the database, so it is never exported, committed or sent to the page.
 SECRETS_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".config")) / "CppAdventure" / "secrets"
-CLAUDE_KEY_FILE = SECRETS_DIR / "anthropic_api_key"
-TUTOR_SYSTEM = "You are a patient C++ tutor inside a cat-themed learning app. Reply in the requested language. Diagnose the learner's actual mistake, explain the cause, then give one progressive hint. Do not provide the complete solution unless the learner explicitly asks for a detailed explanation. Keep it under 160 words."
-
-
-# Free online tutor: Groq's free plan needs no card and returns HTTP 429 instead of charging when its limits are hit.
-GROQ_MODEL = os.environ.get("CPP_ADVENTURE_GROQ_MODEL", "openai/gpt-oss-120b")
-GROQ_FALLBACK_MODEL = os.environ.get("CPP_ADVENTURE_GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
+# Phase 9: the AI tutor is Groq's free plan only (internet, no card, HTTP 429 instead of charges).
+GROQ_MODEL, GROQ_FALLBACK_MODEL = ai_tutor.GROQ_MODEL, ai_tutor.GROQ_FALLBACK_MODEL
 API_KEYS = {
-    "claude": {"env": "ANTHROPIC_API_KEY", "file": "anthropic_api_key", "pattern": r"sk-ant-[A-Za-z0-9_\-]{20,300}", "error": "Bu bir Claude API anahtarına benzemiyor (sk-ant- ile başlamalı)."},
-    "groq": {"env": "GROQ_API_KEY", "file": "groq_api_key", "pattern": r"gsk_[A-Za-z0-9]{20,200}", "error": "Bu bir Groq API anahtarına benzemiyor (gsk_ ile başlamalı)."},
+    "groq": {"env": "GROQ_API_KEY", "file": "groq_api_key", "pattern": r"gsk_[A-Za-z0-9]{20,200}", "error": "Bu bir Groq API anahtarına benzemiyor (gsk_ ile başlamalı). / Это не похоже на ключ Groq (должен начинаться с gsk_)."},
 }
 
 
@@ -99,14 +88,6 @@ def save_provider_key(provider, key):
     if not re.fullmatch(spec["pattern"], key):
         raise ValueError(spec["error"])
     write_secret(SECRETS_DIR, spec["file"], key)
-
-
-def claude_api_key():
-    return provider_key("claude")
-
-
-def save_claude_api_key(key):
-    save_provider_key("claude", key)
 
 
 APP_VERSION = "0.4.0"
@@ -756,71 +737,14 @@ def public_interview_question(question, language, session_id=""):
     return public
 
 
-def _response_text(data):
-    for item in data.get("output", []):
-        if item.get("type") == "message":
-            text = "".join(part.get("text", "") for part in item.get("content", []) if part.get("type") == "output_text")
-            if text:
-                return text
-    return ""
-
-
-def call_ai_provider(provider, prompt):
-    if provider == "openai":
-        key = os.environ.get("OPENAI_API_KEY", "").strip()
-        if not key:
-            return {"error": "OPENAI_API_KEY ayarlı değil.", "unconfigured": True}
-        payload = {"model": OPENAI_MODEL, "store": False, "instructions": "You are a patient C++ tutor. Reply in the requested language. Diagnose the learner's actual mistake, explain the cause, then give one progressive hint. Do not provide the complete solution unless the learner explicitly asks for detailed explanation.", "input": prompt, "max_output_tokens": 450}
-        request = urllib.request.Request("https://api.openai.com/v1/responses", data=json.dumps(payload).encode(), headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(request, timeout=25) as response:
-            data = json.loads(response.read())
-        usage = data.get("usage", {})
-        return {"text": _response_text(data), "model": OPENAI_MODEL, "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
-    if provider == "groq":
-        key = provider_key("groq")
-        if not key:
-            return {"error": "Groq API anahtarı ayarlı değil.", "unconfigured": True}
-        for model in dict.fromkeys([GROQ_MODEL, GROQ_FALLBACK_MODEL]):
-            payload = {"model": model, "temperature": 0.3, "max_completion_tokens": 900, "reasoning_effort": "low", "include_reasoning": False, "messages": [{"role": "system", "content": TUTOR_SYSTEM}, {"role": "user", "content": prompt}]}
-            request = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions", data=json.dumps(payload).encode(), headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
-            try:
-                with urllib.request.urlopen(request, timeout=30) as response:
-                    data = json.loads(response.read())
-            except urllib.error.HTTPError as exc:
-                if exc.code == 429:
-                    continue  # limits are per model, so the smaller model may still have quota
-                raise
-            usage = data.get("usage", {})
-            text = ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
-            return {"text": text, "model": data.get("model", model), "input_tokens": usage.get("prompt_tokens", 0), "output_tokens": usage.get("completion_tokens", 0)}
-        return {"error": "Groq ücretsiz kullanım sınırı doldu; biraz sonra tekrar dene. Bu sırada çevrimdışı ipucu gösteriliyor."}
-    if provider == "claude":
-        key = claude_api_key()
-        if not key:
-            return {"error": "Claude API anahtarı ayarlı değil.", "unconfigured": True}
-        # Haiku 5.5 rejects non-default temperature/top_p/top_k (HTTP 400) and thinks by
-        # default; a short hint needs no thinking, and "disabled" is allowed at low effort.
-        payload = {"model": CLAUDE_MODEL, "max_tokens": 450, "thinking": {"type": "disabled"}, "output_config": {"effort": "low"}, "system": TUTOR_SYSTEM, "messages": [{"role": "user", "content": prompt}]}
-        request = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(payload).encode(), headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}, method="POST")
-        with urllib.request.urlopen(request, timeout=30) as response:
-            data = json.loads(response.read())
-        usage = data.get("usage", {})
-        if data.get("stop_reason") == "refusal":
-            return {"error": "Claude bu isteği yanıtlamadı; çevrimdışı ipucu gösteriliyor.", "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
-        text = "".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
-        if not text.strip():
-            return {"error": "Claude boş yanıt döndürdü; çevrimdışı ipucu gösteriliyor.", "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
-        if data.get("stop_reason") == "max_tokens":
-            text = text.rstrip() + " …"
-        return {"text": text, "model": data.get("model", CLAUDE_MODEL), "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
-    if provider == "ollama":
-        payload = {"model": OLLAMA_MODEL, "stream": False, "messages": [{"role": "system", "content": "You are a patient C++ tutor. Reply in the requested language. Explain the real error, then offer one progressive hint. Do not give the full solution unless asked."}, {"role": "user", "content": prompt}], "options": {"temperature": 0.25}}
-        request = urllib.request.Request(OLLAMA_URL + "/api/chat", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(request, timeout=50) as response:
-            data = json.loads(response.read())
-        message = data.get("message", {}).get("content", "")
-        return {"text": message, "model": OLLAMA_MODEL, "input_tokens": data.get("prompt_eval_count", 0), "output_tokens": data.get("eval_count", 0)}
-    return {"error": "AI sağlayıcısı kapalı."}
+def call_ai_provider(provider, prompt, system=None, language="tr"):
+    """Only the free Groq tutor remains; anything else is reported as disabled."""
+    if provider != "groq":
+        return {"error": ai_tutor.error_message("disabled", language), "error_code": "disabled"}
+    answer = ai_tutor.ask_groq(provider_key("groq"), system or ai_tutor.system_prompt(language, 1), prompt)
+    if answer.get("error_code"):
+        answer["error"] = ai_tutor.error_message(answer["error_code"], language)
+    return answer
 
 
 # ---------------------------------------------------------------- local API security
@@ -1274,7 +1198,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json({"error": "PIN hatalı. / Неверный PIN.", "pin_required": True}, 403)
             last_day = str(saved.get("last_day", ""))
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", last_day): last_day = ""
-            con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (clamp_int(saved.get("xp"), 0, MAX_IMPORTED_XP), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", clamp_int(saved.get("streak"), 0, 3650), last_day, saved.get("ai_provider") if saved.get("ai_provider") in ("offline","ollama","openai","claude","groq","off") else "offline", profile_id))
+            con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (clamp_int(saved.get("xp"), 0, MAX_IMPORTED_XP), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", clamp_int(saved.get("streak"), 0, 3650), last_day, ai_tutor.normalize_provider(saved.get("ai_provider")), profile_id))
             con.execute("DELETE FROM completions WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM achievements WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM quiz_results WHERE profile_id=?", (profile_id,))
@@ -1422,7 +1346,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
             if body.get("lang") in ("tr", "ru"):
                 con.execute("UPDATE profiles SET lang=? WHERE id=?", (body["lang"], profile_id))
-            if body.get("ai_provider") in ("offline", "ollama", "openai", "claude", "groq", "off"):
+            if body.get("ai_provider") in ai_tutor.PROVIDERS:
                 con.execute("UPDATE profiles SET ai_provider=? WHERE id=?", (body["ai_provider"], profile_id))
             if body.get("avatar") in PROFILE_AVATARS:
                 con.execute("UPDATE profiles SET avatar=? WHERE id=?", (body["avatar"], profile_id))
@@ -1500,10 +1424,10 @@ class Handler(SimpleHTTPRequestHandler):
         return self.send_json({"ok": True, "companion": result})
 
     def _post_ai_key(self, path, body):
-        # POST /api/ai/key, /api/ai/claude-key
+        # POST /api/ai/key  {provider: "groq", key, verify?}
         profile_id = body.get("profile_id")
-        provider = "claude" if path == "/api/ai/claude-key" else str(body.get("provider", ""))
-        if provider not in API_KEYS: return self.send_json({"error": "Bilinmeyen AI servisi."}, 400)
+        provider = str(body.get("provider", "groq"))
+        if provider not in API_KEYS: return self.send_json({"error": "Bilinmeyen AI servisi. / Неизвестный ИИ-сервис."}, 400)
         with db() as con:
             if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
         try:
@@ -1518,7 +1442,19 @@ class Handler(SimpleHTTPRequestHandler):
                 # Removing the key returns the tutor to offline hints instead of failing on every request.
                 con.execute("UPDATE profiles SET ai_provider='offline' WHERE id=? AND ai_provider=?", (profile_id, provider))
         hint = ("…" + provider_key(provider)[-4:]) if configured else ""
-        return self.send_json({"ok": True, "provider": provider, "configured": configured, "key_hint": hint, f"{provider}_configured": configured, f"{provider}_key_hint": hint})
+        result = {"ok": True, "provider": provider, "configured": configured, "key_hint": hint, f"{provider}_configured": configured, f"{provider}_key_hint": hint}
+        if configured and body.get("verify") is True:
+            code = ai_tutor.check_key(provider_key(provider))
+            result.update({"verified": code is None, "ai_error_code": code})
+        return self.send_json(result)
+
+    def _post_ai_check(self, path, body):
+        # POST /api/ai/check: verifies the saved Groq key against the free model list (no tokens used).
+        language = body.get("lang") if body.get("lang") in ("tr", "ru") else "tr"
+        with db() as con:
+            if not valid_profile(con, body.get("profile_id")): return self.send_json({"error": "Profil bulunamadı."}, 404)
+        code = ai_tutor.check_key(provider_key("groq"))
+        return self.send_json({"ok": code is None, "ai_error_code": code, "message": "" if code is None else ai_tutor.error_message(code, language)})
 
     def _post_admin(self, path, body):
         # POST /api/admin
@@ -1862,40 +1798,40 @@ class Handler(SimpleHTTPRequestHandler):
         return self.send_json({"equivalent_output": matched, "variants": variants, "timing_note": "Compilation and one run are timed together; timings vary by machine and are not a complexity proof."})
 
     def _post_ai_diagnose(self, path, body):
-        # POST /api/ai/diagnose
+        # POST /api/ai/diagnose  {task_id, code, input?, lang?, consent, hint_level?: 1-3}
         profile_id, task_id, source = body.get("profile_id"), body.get("task_id"), body.get("code", "")
         if not isinstance(source, str) or len(source) > MAX_SOURCE: return self.send_json({"error": "Kod sınırı aşıldı."}, 400)
         task = content_index.task(task_id)
         if not task: return self.send_json({"error": "Görev bulunamadı."}, 404)
+        program_input = body.get("input", "") if isinstance(body.get("input", ""), str) else ""
         with db() as con:
             profile = valid_profile(con, profile_id)
             if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
-            provider, language = profile["ai_provider"], body.get("lang") if body.get("lang") in ("tr", "ru") else profile["lang"]
-            recent = [dict(row) for row in con.execute("SELECT task_id,attempts,correct,last_answer FROM quiz_results WHERE profile_id=? ORDER BY updated_at DESC LIMIT 8", (profile_id,))]
-        local = diagnose_locally(task, source, body.get("input", ""), language)
-        if provider in ("offline", "off"):
-            return self.send_json({"ok": True, "provider": provider, "diagnostic": local, "text": local["message" if language == "tr" else "message_ru"]})
-        if provider in ("openai", "claude", "groq") and body.get("consent") is not True:
+            provider = ai_tutor.normalize_provider(profile["ai_provider"])
+            language = body.get("lang") if body.get("lang") in ("tr", "ru") else profile["lang"]
+            recent = [dict(row) for row in con.execute("SELECT task_id,attempts,correct FROM quiz_results WHERE profile_id=? ORDER BY updated_at DESC LIMIT 8", (profile_id,))]
+        local = diagnose_locally(task, source, program_input, language)
+        local_text = local["message" if language == "tr" else "message_ru"]
+        level = ai_tutor.hint_level(body.get("hint_level"))
+        if provider != "groq":
+            return self.send_json({"ok": True, "provider": provider, "diagnostic": local, "text": local_text, "hint_level": level})
+        if body.get("consent") is not True:
             return self.send_json({"error": "Kodun çevrimiçi AI servisine gönderilmesi için onay gerekiyor.", "consent_required": True}, 403)
         course = content_index.chapter_of(task_id) or {}
-        prompt = json.dumps({"language": language, "topic": course.get("title", {}).get(language, "C++"), "lesson": course.get("lesson", {}).get(language, ""), "task": task.get("prompt", {}).get(language, ""), "concept_criteria": task.get("concept_criteria", {}).get(language, ""), "expected_output": task.get("expected", ""), "learner_code": source[:MAX_SOURCE], "program_input": body.get("input", "")[:2000], "compiler_and_test_diagnosis": local, "recent_quiz_history": recent}, ensure_ascii=False)
-        try:
-            answer = call_ai_provider(provider, prompt)
-            if answer.get("error"):
-                return self.send_json({"ok": True, "provider": "offline-fallback", "diagnostic": local, "text": local["message" if language == "tr" else "message_ru"], "ai_unavailable": answer.get("unconfigured", False), "ai_error": answer["error"]})
-            in_tokens, out_tokens = int(answer.get("input_tokens", 0)), int(answer.get("output_tokens", 0))
-            in_rate = float(os.environ.get("CPP_ADVENTURE_INPUT_USD_PER_MILLION", "0"))
-            out_rate = float(os.environ.get("CPP_ADVENTURE_OUTPUT_USD_PER_MILLION", "0"))
-            if provider == "claude" and not (in_rate or out_rate):
-                in_rate, out_rate = CLAUDE_PRICES.get(str(answer.get("model") or CLAUDE_MODEL), (0, 0))
-            estimate = in_tokens * in_rate / 1_000_000 + out_tokens * out_rate / 1_000_000
-            with db() as con:
-                con.execute("INSERT INTO ai_usage(profile_id,provider,model,input_tokens,output_tokens,requests,estimated_usd) VALUES(?,?,?,?,?,1,?) ON CONFLICT(profile_id,provider,model) DO UPDATE SET input_tokens=input_tokens+excluded.input_tokens,output_tokens=output_tokens+excluded.output_tokens,requests=requests+1,estimated_usd=estimated_usd+excluded.estimated_usd,updated_at=CURRENT_TIMESTAMP", (profile_id, provider, answer.get("model", ""), in_tokens, out_tokens, estimate))
-            return self.send_json({"ok": True, "provider": provider, "model": answer.get("model"), "text": answer.get("text") or local["message" if language == "tr" else "message_ru"], "diagnostic": local, "input_tokens": in_tokens, "output_tokens": out_tokens, "estimated_usd": estimate, "cost_estimate_configured": in_rate > 0 or out_rate > 0})
-        except urllib.error.HTTPError as exc:
-            return self.send_json({"ok": True, "provider": "offline-fallback", "diagnostic": local, "text": local["message" if language == "tr" else "message_ru"], "ai_error": f"AI HTTP {exc.code}"})
-        except Exception as exc:
-            return self.send_json({"ok": True, "provider": "offline-fallback", "diagnostic": local, "text": local["message" if language == "tr" else "message_ru"], "ai_error": str(exc)[:240]})
+        context = {"answer_language": ai_tutor.LANGUAGE_NAMES[language], "hint_level": level,
+                   "topic": course.get("title", {}).get(language, "C++"), "lesson": course.get("lesson", {}).get(language, ""),
+                   "task": task.get("prompt", {}).get(language, ""), "concept_criteria": task.get("concept_criteria", {}).get(language, ""),
+                   "visible_example_output": task.get("expected", ""), "compiler_and_test_diagnosis": local, "recent_quiz_history": recent}
+        answer = ai_tutor.ask_groq(provider_key("groq"), ai_tutor.system_prompt(language, level), ai_tutor.user_prompt(context, source[:MAX_SOURCE], program_input))
+        if answer.get("error_code"):
+            code = answer["error_code"]
+            return self.send_json({"ok": True, "provider": "offline-fallback", "diagnostic": local, "text": local_text, "hint_level": level,
+                                   "ai_unavailable": code == "unconfigured", "ai_error_code": code, "ai_error": ai_tutor.error_message(code, language)})
+        in_tokens, out_tokens = answer["input_tokens"], answer["output_tokens"]
+        with db() as con:
+            con.execute("INSERT INTO ai_usage(profile_id,provider,model,input_tokens,output_tokens,requests,estimated_usd) VALUES(?,?,?,?,?,1,0) ON CONFLICT(profile_id,provider,model) DO UPDATE SET input_tokens=input_tokens+excluded.input_tokens,output_tokens=output_tokens+excluded.output_tokens,requests=requests+1,updated_at=CURRENT_TIMESTAMP", (profile_id, "groq", answer.get("model", ""), in_tokens, out_tokens))
+        return self.send_json({"ok": True, "provider": "groq", "model": answer.get("model"), "text": answer["text"], "diagnostic": local,
+                               "hint_level": level, "input_tokens": in_tokens, "output_tokens": out_tokens, "free": True})
 
     def _post_language(self, path, body):
         # POST /api/language
@@ -2061,15 +1997,12 @@ class Handler(SimpleHTTPRequestHandler):
         with db() as con:
             profile = valid_profile(con, profile_id)
             if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
-            usage = [dict(row) for row in con.execute("SELECT provider,model,input_tokens,output_tokens,requests,estimated_usd FROM ai_usage WHERE profile_id=?", (profile_id,))]
-            selected = profile["ai_provider"]
-        ollama_models = []
-        try:
-            request = urllib.request.Request(OLLAMA_URL + "/api/tags", method="GET")
-            with urllib.request.urlopen(request, timeout=1.5) as response:
-                ollama_models = [item.get("name", "") for item in json.loads(response.read()).get("models", [])]
-        except Exception: pass
-        return self.send_json({"provider": selected, "openai_configured": bool(os.environ.get("OPENAI_API_KEY", "").strip()), "openai_model": OPENAI_MODEL, "ollama_url": OLLAMA_URL, "ollama_models": ollama_models, "ollama_model": OLLAMA_MODEL, "claude_configured": bool(claude_api_key()), "claude_key_from_env": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()), "claude_key_hint": ("…" + claude_api_key()[-4:]) if claude_api_key() else "", "claude_model": CLAUDE_MODEL, "groq_configured": bool(provider_key("groq")), "groq_key_from_env": provider_key_from_env("groq"), "groq_key_hint": ("…" + provider_key("groq")[-4:]) if provider_key("groq") else "", "groq_model": GROQ_MODEL, "usage": usage})
+            usage = [dict(row) for row in con.execute("SELECT provider,model,input_tokens,output_tokens,requests FROM ai_usage WHERE profile_id=?", (profile_id,))]
+        key = provider_key("groq")
+        return self.send_json({"provider": ai_tutor.normalize_provider(profile["ai_provider"]), "providers": list(ai_tutor.PROVIDERS), "free": True,
+                               "groq_configured": bool(key), "groq_key_from_env": provider_key_from_env("groq"),
+                               "groq_key_hint": ("…" + key[-4:]) if key else "", "groq_model": GROQ_MODEL,
+                               "groq_fallback_model": GROQ_FALLBACK_MODEL, "groq_key_page": ai_tutor.GROQ_KEY_PAGE, "usage": usage})
 
     def _get_shop(self, path):
         # GET /api/shop
@@ -2360,7 +2293,7 @@ POST_ROUTES = {
     "/api/companion/loadout/apply": "_post_companion_loadout_apply",
     "/api/companion/loadout/delete": "_post_companion_loadout_delete",
     "/api/ai/key": "_post_ai_key",
-    "/api/ai/claude-key": "_post_ai_key",
+    "/api/ai/check": "_post_ai_check",
     "/api/admin": "_post_admin",
     "/api/rpg/equip": "_post_rpg_equip",
     "/api/rpg/secret/claim": "_post_rpg_secret_claim",

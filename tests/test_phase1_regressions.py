@@ -167,32 +167,15 @@ class Phase1RegressionTests(unittest.TestCase):
         self.assertFalse(server.admin_enabled_from_env({"CPP_ADVENTURE_ADMIN": "0"}))
         self.assertTrue(server.admin_enabled_from_env({"CPP_ADVENTURE_ADMIN": "1"}))
 
-    # 10. claude-haiku-5-5 rejects non-default temperature with HTTP 400.
-    def test_claude_payload_uses_supported_parameters(self):
-        captured = {}
+    # 10. Phase 9 removed the paid (Claude, OpenAI) and local (Ollama) tutors; only free Groq remains.
+    def test_removed_ai_providers_never_make_a_request(self):
+        def no_network(request, timeout=0):
+            raise AssertionError("a removed provider must not open a connection")
 
-        def fake_urlopen(request, timeout=0):
-            captured["body"] = json.loads(request.data)
-            return FakeResponse({"model": "claude-haiku-5-5", "stop_reason": "end_turn", "content": [{"type": "text", "text": "İpucu"}], "usage": {"input_tokens": 1, "output_tokens": 1}})
-
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-ant-test-0000000000000000000000"}), patch.object(server.urllib.request, "urlopen", fake_urlopen):
-            answer = server.call_ai_provider("claude", "{}")
-        body = captured["body"]
-        for sampling in ("temperature", "top_p", "top_k"):
-            self.assertNotIn(sampling, body)
-        self.assertEqual(body["output_config"], {"effort": "low"})
-        self.assertEqual(body["thinking"], {"type": "disabled"})
-        self.assertEqual(answer["text"], "İpucu")
-
-    def test_claude_refusal_and_empty_truncation_are_errors(self):
-        for stop_reason, content in (("refusal", []), ("max_tokens", [])):
-            def fake_urlopen(request, timeout=0, _s=stop_reason, _c=content):
-                return FakeResponse({"model": "claude-haiku-5-5", "stop_reason": _s, "content": _c, "usage": {}})
-
-            with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-ant-test-0000000000000000000000"}), patch.object(server.urllib.request, "urlopen", fake_urlopen):
-                answer = server.call_ai_provider("claude", "{}")
-            self.assertIn("error", answer, stop_reason)
-
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-ant-test-0000000000000000000000", "OPENAI_API_KEY": "sk-test"}), \
+                patch.object(server.urllib.request, "urlopen", no_network):
+            for provider in ("claude", "openai", "ollama"):
+                self.assertEqual(server.call_ai_provider(provider, "{}")["error_code"], "disabled", provider)
 
 if __name__ == "__main__":
     unittest.main()

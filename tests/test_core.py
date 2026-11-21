@@ -725,7 +725,7 @@ class CoreSystemTests(unittest.TestCase):
         self.assertIn("first_boss", profile["achievements"])
         self.assertIn("algorithmist", profile["achievements"])
 
-    def test_ai_diagnosis_is_local_by_default_and_openai_requires_consent(self):
+    def test_ai_diagnosis_is_local_by_default_and_groq_requires_consent(self):
         _, created = self.request("POST", "/api/profiles", {"name": "AI learner"})
         pid = created["profile_id"]
         code = "#include <iostream>\nint main(){std::cout << 42;}"
@@ -733,7 +733,7 @@ class CoreSystemTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(local["provider"], "offline")
         self.assertIn("diagnostic", local)
-        self.request("POST", "/api/settings", {"profile_id": pid, "ai_provider": "openai"})
+        self.request("POST", "/api/settings", {"profile_id": pid, "ai_provider": "groq"})
         status, denied = self.request("POST", "/api/ai/diagnose", {"profile_id": pid, "task_id": "c03-04", "code": code, "lang": "tr", "consent": False})
         self.assertEqual(status, 403)
         self.assertTrue(denied["consent_required"])

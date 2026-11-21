@@ -82,11 +82,17 @@ def _m4_hint_reveals(con, ctx):
     con.execute("CREATE TABLE IF NOT EXISTS hint_reveals(profile_id TEXT NOT NULL, task_id TEXT NOT NULL, level INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,task_id,level), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE)")
 
 
+def _m5_free_online_tutor(con, ctx):
+    """Phase 9: only Groq's free plan remains; profiles that chose a removed AI keep an AI tutor."""
+    con.execute("UPDATE profiles SET ai_provider='groq' WHERE ai_provider IN ('ollama','openai','claude')")
+
+
 MIGRATIONS = (
     (1, "baseline schema", _m1_baseline),
     (2, "history indexes", _m2_indexes),
     (3, "learning event backfill", _m3_backfill_learning_events),
     (4, "server-side hint reveals", _m4_hint_reveals),
+    (5, "free online AI tutor only", _m5_free_online_tutor),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
