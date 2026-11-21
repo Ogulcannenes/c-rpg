@@ -278,7 +278,47 @@ Claude Code because the machine ran critically low on memory — not a test fail
   cascade is unchanged.
 - Tests: `tests/test_dashboard_ui.py` (load order, no duplicate stylesheet, delegation, every copy
   key in both languages, Russian plural forms, buttons + escaping, theme tokens/focus/motion).
-- **Not yet done:** full-suite run and browser screenshots — the machine had only ~0.7 GB free RAM
-  (earlier background runs were killed by Claude Code's low-memory guard). Targeted run:
-  `test_dashboard_ui, test_architecture, test_i18n_catalog, test_cat_companion_ui, test_cat_growth,
-  test_visual_polish, test_startup_pin` → 45 tests OK.
+- Later the same day (1.9 GB free): full suite **239 tests OK** (204 s). Browser check at
+  1440×900 with a throwaway DB; fixed the companion card overflow and card-header alignment
+  (`01ca488`).
+
+## Phase 6 (part 2) — Skill tree, lesson editor, offline editor (2026-11-21)
+
+- `web/skill-tree.js`: the knowledge map now opens with a skill tree computed from each chapter's
+  real `prerequisites` (longest-path layering + one barycentre pass; 20 nodes, 31 edges today).
+  Nodes are `<button>`s with a full `aria-label` (status, progress, prerequisites); locked nodes
+  explain which chapters are still missing; edges to/from the hovered or focused node light up.
+  New chapters appear automatically. Copy: `locales.json` → `modules.skillTree` (tr + ru).
+- Knowledge-map card titles are now real buttons (`.map-open`) — the cards were mouse-only.
+- Lesson view: single column below 1100 px, editor toolbar wraps, button text 12 px (was 9 px).
+- `web/monaco-boot.js`: if Monaco cannot load, `MonacoReady` resolves with a `<textarea>` stand-in
+  implementing the API subset the app uses (create/getValue/setValue/onDidChangeModelContent/
+  addCommand incl. Ctrl+S/deltaDecorations/Range/registerCompletionItemProvider/dispose), so
+  code tasks, the workshop, arena and interviews stay usable. Verified in the browser by blocking
+  the loader: a code task was written, compiled, accepted and auto-advanced.
+- Success flow: after the 850 ms auto-advance, focus moves to the new task title (`#task-title`);
+  `#task-result` is `role=status aria-live=polite`, `#console` is `role=log aria-live=polite`.
+- Tests: `tests/test_skill_tree.py` (Node layout test on the real curriculum: every edge points
+  forward, no overlaps, inside bounds), `tests/test_editor_fallback.py` (Node + fake DOM).
+
+## Phase 7 — Game economy and server authority (2026-11-21)
+
+- `state()` returns `PUBLIC_CURRICULUM`: answers, expected outputs, hidden tests and concept rules
+  no longer reach the browser (before, every answer was readable in DevTools). Code/fix/boss tasks
+  carry one worked example plus `test_count`. Grading is unchanged (server-side).
+- Level vs. money: `profile.lifetime_xp` (drives the level, never decreases) and
+  `profile.balance` (spendable, the shop deducts from it) are reported separately; the dashboard
+  shows both. Levels were already derived from completions, so purchases never cost a level —
+  now that is explicit and tested.
+- Arena: `GET /api/arena` records when the server showed the challenge; a submission's time is
+  `max(server-observed, compile time, claimed)`, so `solve_ms: 1` can no longer top the fastest list.
+- Study time: a pulse may grow a session at most by the wall-clock time since its last pulse
+  + 45 s (first pulse ≤ 120 s). `test_core` used an impossible 30→90 s jump in 0 s; it now uses
+  30→70 s, and a new test proves an instant 11-hour jump is capped.
+- Static files: `Cache-Control: no-cache` (revalidate) for app files, one day for `/vendor/`;
+  before, no header was sent and WebView2 could keep showing an old version after an update.
+- Tests: `tests/test_phase7_economy.py` (no secrets in state, quiz still graded, purchase keeps
+  level, arena floor, cache headers). Full suite: **252 tests OK** (210 s).
+- **Not done in Phase 7 (deferred):** server-side hint tracking (hints are still client-side and
+  give no reward penalty), shuffling interview options, shop rebalancing; workshop projects still
+  send their test cases (they are shown to the learner by design).
