@@ -82,7 +82,11 @@ C++ öğrenmek için kedili bir macera oyunu. Dersler, görevler ve geri bildiri
 
 ### 2a. Kurulum dosyasıyla (önerilen)
 
-1. `C++Adventure-Setup-0.5.0.exe` dosyasını çalıştır. Kurulum yönetici izni istemez ve programı yalnızca senin Windows hesabına kurar.
+1. Kurulum dosyasını çalıştır. Hazır bir kurulum dosyası dağıtılmıyor; önce [kaynak koddan üretmen](#kaynak-koddan-paket-oluşturma) gerekir. `build-windows.bat` çalıştırıldığında dosya `dist\` klasörüne şu adla çıkar:
+   - Inno Setup 6 kuruluysa `C++Adventure-Setup-0.5.0.exe` (kaldırıcısı olan kurulum, önerilen).
+   - Inno Setup yoksa `C++Adventure-Setup.exe` (tek dosyalık eski kurulum, kaldırıcısı yok).
+
+   Kurulum yönetici izni istemez ve programı yalnızca senin Windows hesabına kurar.
 2. Kurulum dilini seç (Türkçe veya Русский) ve adımları izle. Masaüstü kısayolu isteğe bağlıdır.
 3. Uygulama açıksa kurulum, devam etmeden önce kapatmanı ister. WebView2 eksikse bunu bildirir.
 
