@@ -87,8 +87,8 @@
     const lineIndex = sim.mode === 'mutex' ? 4 : s.line.startsWith('int local') ? 4 : 5;
     $$('#adv-code-lines li', host).forEach((li, i) => li.classList.toggle('active', i === lineIndex || (sim.mode === 'mutex' && i === 5)));
     $('#adv-step-text', host).textContent = lg() === 'ru' ? s.text_ru : s.text;
-    $('#adv-timeline', host).innerHTML = data.map((d, i) => `<button type="button" class="${d.event} ${i === step ? 'current' : ''} ${i < step ? 'past' : ''}" data-i="${i}" title="${esc(sim.steps[i].thread)}" style="--k:${Number(sim.steps[i].thread.slice(1)) - 1}"></button>`).join('');
-    $$('#adv-timeline button', host).forEach(b => b.onclick = () => { pause(); step = +b.dataset.i; paintThreads(); });
+    $('#adv-timeline', host).innerHTML = data.map((d, i) => `<button type="button" class="${d.event} ${i === step ? 'current' : ''} ${i < step ? 'past' : ''}" data-idx="${i}" title="${esc(sim.steps[i].thread)}" style="--k:${Number(sim.steps[i].thread.slice(1)) - 1}"></button>`).join('');
+    $$('#adv-timeline button', host).forEach(b => b.onclick = () => { pause(); step = +b.dataset.idx; paintThreads(); });
     $('#adv-back', host).disabled = step === 0;
     $('#adv-next', host).disabled = step >= sim.steps.length - 1;
     $('#adv-play', host).textContent = timer ? `⏸ ${T('Duraklat', 'Пауза')}` : `▶ ${T('Oynat', 'Играть')}`;

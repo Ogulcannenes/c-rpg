@@ -458,12 +458,12 @@
     const stages = sim.stages || [];
     if (!scene.dataset.layout) {
       scene.dataset.layout = 'flow';
-      scene.innerHTML = `<div class="lt-flow" style="--n:${stages.length}">${stages.map((s, i) => `<div class="lt-stagebox" data-i="${i}"><span class="lt-stage-icon">${escHtml(s.icon)}</span><b>${escHtml(s.label)}</b><small>${escHtml(s.sub || '')}</small></div>`).join('<i class="lt-flow-link" aria-hidden="true"></i>')}<div class="lt-packet"></div></div><div class="lt-row lt-cells lt-flow-vars"></div>`;
+      scene.innerHTML = `<div class="lt-flow" style="--n:${stages.length}">${stages.map((s, i) => `<div class="lt-stagebox" data-idx="${i}"><span class="lt-stage-icon">${escHtml(s.icon)}</span><b>${escHtml(s.label)}</b><small>${escHtml(s.sub || '')}</small></div>`).join('<i class="lt-flow-link" aria-hidden="true"></i>')}<div class="lt-packet"></div></div><div class="lt-row lt-cells lt-flow-vars"></div>`;
     }
     const flow = $('.lt-flow', scene), at = Math.max(-1, Math.min(stages.length - 1, step.stage ?? -1));
     $$('.lt-stagebox', flow).forEach((box, i) => { box.classList.toggle('done', i < at); box.classList.toggle('current', i === at); box.classList.toggle('is-error', i === at && step.stage_state === 'error'); });
     $$('.lt-flow-link', flow).forEach((link, i) => link.classList.toggle('done', i < at));
-    const packet = $('.lt-packet', flow), box = $(`.lt-stagebox[data-i="${at}"]`, flow);
+    const packet = $('.lt-packet', flow), box = $(`.lt-stagebox[data-idx="${at}"]`, flow);
     if (box && step.payload) {
       packet.textContent = step.payload;
       packet.classList.toggle('is-error', step.stage_state === 'error');
@@ -539,8 +539,8 @@
         if (fresh) {
           inst.scene.innerHTML = ''; delete inst.scene.dataset.layout; $('.lt-out', root).textContent = ''; $$('.lt-wire, .lt-spark', root).forEach(n => n.remove());
           Object.assign(inst, {sim, index: -1, ids: [], values: []});
-          $('.lt-timeline', root).innerHTML = sim.steps.map((_, i) => `<button type="button" data-i="${i}" aria-label="${T('Adım', 'Шаг')} ${i + 1}"></button>`).join('');
-          $$('.lt-timeline button', root).forEach(btn => btn.onclick = () => options.onSeek?.(Number(btn.dataset.i)));
+          $('.lt-timeline', root).innerHTML = sim.steps.map((_, i) => `<button type="button" data-idx="${i}" aria-label="${T('Adım', 'Шаг')} ${i + 1}"></button>`).join('');
+          $$('.lt-timeline button', root).forEach(btn => btn.onclick = () => options.onSeek?.(Number(btn.dataset.idx)));
           $('.lt-timeline', root).classList.toggle('is-dense', sim.steps.length > 18);
         }
         const steps = sim.steps, i = Math.max(0, Math.min(index, steps.length - 1)), step = steps[i];

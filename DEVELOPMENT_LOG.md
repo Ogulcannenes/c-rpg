@@ -67,3 +67,91 @@ No flaky failure reappeared.
 - Possible flaky test from the first baseline run (failure not captured).
 - PIN is still checked only on select/update/delete/import; all other endpoints trust the
   client's `profile_id`. Replaced in Phase 2 by a per-launch API token plus per-profile sessions.
+
+## Phase 2 — Security hardening (2026-11-21)
+
+### Learner-program sandbox (Windows, verified on this machine)
+
+New `sandbox_windows.py`; `sandbox.py` is the platform-neutral facade (same `run_limited` API).
+
+- Programs are created **suspended**; a Job Object is attached **before** the first instruction:
+  1 process (no children), 512 MB memory, CPU-time cap, UI restrictions (clipboard, desktop,
+  ExitWindows…), no crash dialogs, kill-on-close. If the job cannot be attached the process is
+  terminated without ever running (fail closed → `phase: "sandbox_error"`).
+- When available (it is here), programs run in an **AppContainer with no capabilities**: no
+  network (loopback included, so no access to the local API), no access to user files, low
+  integrity. Fallback is the Job Object alone, reported as `sandbox: "job"` and in `/api/health`.
+- Minimal environment block: API keys and user variables are **not** inherited (they were before).
+- Each run gets a fresh, empty working folder (deleted afterwards); workspace data files
+  (`.txt/.csv/.json/...`, ≤2 MB) are copied in. Learner binaries are linked `-static`.
+- Compiler, CMake and clang run inside a Job Object (2 GB/process, 3 GB/job, ≤32 processes);
+  a timeout kills the whole tree. At most `MAX_PARALLEL_BUILDS` (2) compile/run jobs at once;
+  others wait up to 60 s, then get `phase: "busy"`.
+- Compile-time file access: `#include`/`__has_include` with absolute or `..` paths, computed
+  includes, `#embed`, `#pragma GCC dependency` are rejected (line splices and `%:` digraphs
+  handled). Inline asm is checked on the **expanded `-S` output** before assembling, so
+  `.incbin`/`.include` hidden behind string concatenation or macros cannot read files — not
+  even through assembler error messages. Builds are therefore C++→asm, check, asm→exe.
+- Identical sources are compiled once (LRU cache of 24 builds) — several test inputs reuse
+  one binary.
+
+Measured with real programs (smoke test + `tests/test_sandbox_windows.py`):
+
+| Attempt | AppContainer (default) | Job only (fallback) |
+|---|---|---|
+| read a file in the user profile | blocked | readable |
+| write outside the run folder | blocked | possible |
+| files in its own run folder (c14 tasks) | works | works |
+| `system("cmd ...")` | blocked | blocked |
+| read API keys from environment | none | none |
+| connect to a loopback port | no connection | connects |
+| infinite loop / crash / output flood / memory bomb | killed at 3 s / ~0.06 s, no dialog / 64 KB cap / `bad_alloc` at the cap | same |
+
+**Known limitations:** the compiler itself runs as the user (only the policy checks above stop
+compile-time reads); POSIX mode is for development only (rlimits + process group, no file or
+network isolation); the AppContainer profile `CppAdventure.Sandbox` persists in the user
+profile and should be removed by the uninstaller (Phase 11).
+
+### Local API
+
+- **Per-launch session:** `create_app_server()` makes a random token; the window opens
+  `/__session?code=<one-time code>` which sets an `HttpOnly; SameSite=Strict` cookie
+  (`cppadv_session_<port>`). Every `/api/*` request without it gets 401. Static files stay
+  public; the token never appears in page content. `desktop.py` and `server.main()` use it.
+  In-process test servers (`server.Handler` directly) have no auth by design.
+- **Port race removed:** the server binds port 0 itself instead of probe-close-rebind.
+- **PIN enforced everywhere:** a PIN-protected profile is locked until `/api/select` succeeds;
+  selecting another profile locks the previous one; every endpoint with a `profile_id` returns
+  403 `pin_required` while locked (exempt: select, create, update/delete/import, which verify
+  the PIN themselves). The UI already falls back to the profile picker + cat PIN dialog.
+- **Headers on every response:** CSP (`default-src 'self'`, no objects/frames/foreign
+  connections; `script-src` still allows inline handlers until Phase 5 removes them),
+  `nosniff`, `no-referrer`, `X-Frame-Options: DENY`, COOP.
+- **XSS:** profile name was written unescaped into an `aria-label` (`cat-companion-ui.js`);
+  now escaped at the sink. Names with control characters, `<`, `>` or backticks are rejected.
+- **API keys:** stored with Windows DPAPI (`secret_store.py`, `<name>.dpapi`); legacy plaintext
+  files are migrated on first read and the plaintext copy removed.
+- **Import validation:** XP, streak, per-task/lab XP, rewards, scores and dates are clamped to
+  real ranges; interview answers are rebuilt from known fields (no truncated JSON).
+
+### Found during the browser check (pre-existing bug)
+
+The language refresh in `app.js` rewrites every `[data-i]` element; onboarding, lab theater,
+advanced C++ and project steps used `data-i` as a numeric index, so their content (e.g. the
+character cards) was replaced by `0…6`. Index attributes renamed to `data-idx`; regression test
+added. Verified in Chrome: cards keep names and images after a language refresh.
+
+Browser check (throwaway DB, real `create_app_server`): session cookie works and is not
+readable from JavaScript; Monaco loads under the CSP with no violations; `/api/run` through the
+UI session ran in the AppContainer (`sandbox: "appcontainer"`). Only console error:
+pre-existing missing `favicon.ico`.
+
+**Files:** `sandbox.py` (rewritten), `sandbox_windows.py`, `secret_store.py` (new), `server.py`,
+`desktop.py`, `project_workshop.py`, `advanced_cpp.py`, `concept_checker.py`,
+`web/cat-companion-ui.js`, `web/onboarding.js`, `web/lab-theater.js`, `web/advanced-cpp-ui.js`,
+`web/app.js`; tests `test_sandbox_windows.py`, `test_phase2_security.py` (new),
+`test_phase1_regressions.py`, `test_claude_ai.py` (expects DPAPI instead of plaintext).
+
+**Results:** full suite three consecutive runs: 212 OK / 213 OK / 213 OK (~206–223 s; the
+213th test is the `data-idx` regression added during run 1). Suite time dropped from ~228 s
+despite more tests, thanks to the compile cache.

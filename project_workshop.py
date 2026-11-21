@@ -10,7 +10,7 @@ import tempfile
 import time
 from pathlib import Path, PurePosixPath
 
-from sandbox import run_limited
+from sandbox import SandboxBusy, assembly_policy_violation, build_slot, run_limited, run_tool, source_policy_violation
 
 
 MAX_FILES = 24
@@ -75,9 +75,53 @@ def build_project(files: dict[str, str], input_text: str = "", mode: str = "g++"
     valid, error = validate_files(files)
     if error:
         return {"ok": False, "phase": "validate", "error": error}
-    sources = sorted(name for name in valid if Path(name).suffix.lower() in SOURCE_SUFFIXES)
+    for content in valid.values():
+        policy_error = source_policy_violation(content)
+        if policy_error:
+            return {"ok": False, "phase": "validate", "error": policy_error}
     started = time.perf_counter()
-    no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        with build_slot():
+            return _build_and_run(valid, input_text, mode, compiler, cmake, started)
+    except SandboxBusy as exc:
+        return {"ok": False, "phase": "busy", "error": str(exc), "elapsed_ms": round((time.perf_counter() - started) * 1000)}
+    except OSError as exc:  # isolation could not be applied: nothing ran (fail closed)
+        return {"ok": False, "phase": "sandbox_error", "error": f"Güvenli çalıştırma ortamı hazırlanamadı. / Не удалось подготовить безопасную среду. ({exc})",
+                "elapsed_ms": round((time.perf_counter() - started) * 1000)}
+
+
+# Windows: link statically so the program can run inside the AppContainer sandbox.
+STATIC_FLAGS = ["-static"] if os.name == "nt" else []
+
+
+def _compile_to_assembly(compiler: str, root: Path, sources: list[str], started: float):
+    """Compile every source to assembly and reject .incbin/.include before anything is assembled.
+
+    g++ mode links these .s files directly; CMake mode uses this as a pre-check (CMake then
+    rebuilds the same sources with the same compiler). Returns (paths, None) or (None, error).
+    """
+    elapsed = lambda: round((time.perf_counter() - started) * 1000)
+    asm_dir = root / ".assembly"
+    asm_dir.mkdir()
+    outputs = []
+    for index, name in enumerate(sources):
+        target = asm_dir / f"{index:02d}_{Path(name).stem}.s"
+        result = run_tool([compiler, "-std=c++20", "-O0", "-pipe", "-I", str(root), "-I", str(root / "include"), "-S",
+                           str(root.joinpath(*PurePosixPath(name).parts)), "-o", str(target)], 20, str(root))
+        if result.timed_out:
+            return None, {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "error": "Derleme 20 saniyede tamamlanmadı. / Компиляция не завершилась за 20 секунд.", "elapsed_ms": elapsed()}
+        if result.returncode:
+            message = (result.stdout + result.stderr)[-6000:]
+            return None, {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": message, "error": message, "elapsed_ms": elapsed()}
+        violation = assembly_policy_violation(target.read_text(encoding="utf-8", errors="replace"))
+        if violation:
+            return None, {"ok": False, "phase": "validate", "compile_ok": False, "compile_output": "", "error": violation, "elapsed_ms": elapsed()}
+        outputs.append(target)
+    return outputs, None
+
+
+def _build_and_run(valid: dict[str, str], input_text: str, mode: str, compiler: str, cmake: str | None, started: float) -> dict:
+    sources = sorted(name for name in valid if Path(name).suffix.lower() in SOURCE_SUFFIXES)
     with tempfile.TemporaryDirectory(prefix="cpp-adventure-project-") as temp_dir:
         root = Path(temp_dir)
         for name, content in valid.items():
@@ -87,21 +131,26 @@ def build_project(files: dict[str, str], input_text: str = "", mode: str = "g++"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
         exe = root / ("adventure.exe" if os.name == "nt" else "adventure")
+        assembly, failure = _compile_to_assembly(compiler, root, sources, started)
+        if failure:
+            return failure
         if mode == "g++":
-            command = [compiler, "-std=c++20", "-O0", "-pipe", "-I", str(root), "-I", str(root / "include"), *[str(root.joinpath(*PurePosixPath(name).parts)) for name in sources], "-o", str(exe)]
+            command = [compiler, "-pipe", *STATIC_FLAGS, *[str(path) for path in assembly], "-o", str(exe)]
             cwd = str(root)
         else:
             source_names = " ".join(f'"{name}"' for name in sources)
             cmake_text = "\n".join(("cmake_minimum_required(VERSION 3.20)", "project(CppAdventureWorkspace LANGUAGES CXX)", "set(CMAKE_CXX_STANDARD 20)", "set(CMAKE_CXX_STANDARD_REQUIRED ON)", f"add_executable(adventure {source_names})", 'target_include_directories(adventure PRIVATE "${CMAKE_SOURCE_DIR}/include")', ""))
             (root / "CMakeLists.txt").write_text(cmake_text, encoding="utf-8")
             build_dir = root / "build"
-            command = [cmake, "-S", str(root), "-B", str(build_dir), "-G", "MinGW Makefiles", f"-DCMAKE_CXX_COMPILER={compiler}", f"-DCMAKE_MAKE_PROGRAM={shutil.which('mingw32-make') or 'mingw32-make'}", "-DCMAKE_BUILD_TYPE=Debug"]
-            try:
-                configured = subprocess.run(command, capture_output=True, text=True, timeout=20, cwd=str(root), encoding="utf-8", errors="replace", creationflags=no_window)
-                if configured.returncode:
-                    return {"ok": False, "phase": "configure", "compile_ok": False, "compile_output": (configured.stdout + configured.stderr)[-6000:], "error": (configured.stdout + configured.stderr)[-6000:], "elapsed_ms": round((time.perf_counter()-started)*1000)}
-                built = subprocess.run([cmake, "--build", str(build_dir), "--config", "Debug", "--parallel", "2"], capture_output=True, text=True, timeout=25, cwd=str(root), encoding="utf-8", errors="replace", creationflags=no_window)
-            except subprocess.TimeoutExpired:
+            command = [cmake, "-S", str(root), "-B", str(build_dir), "-G", "MinGW Makefiles", f"-DCMAKE_CXX_COMPILER={compiler}", f"-DCMAKE_MAKE_PROGRAM={shutil.which('mingw32-make') or 'mingw32-make'}", "-DCMAKE_BUILD_TYPE=Debug",
+                       *([f"-DCMAKE_EXE_LINKER_FLAGS={' '.join(STATIC_FLAGS)}"] if STATIC_FLAGS else [])]
+            configured = run_tool(command, 20, str(root))
+            if configured.timed_out:
+                return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "error": "CMake derlemesi süre sınırını aştı. / Сборка CMake превысила лимит времени.", "elapsed_ms": round((time.perf_counter()-started)*1000)}
+            if configured.returncode:
+                return {"ok": False, "phase": "configure", "compile_ok": False, "compile_output": (configured.stdout + configured.stderr)[-6000:], "error": (configured.stdout + configured.stderr)[-6000:], "elapsed_ms": round((time.perf_counter()-started)*1000)}
+            built = run_tool([cmake, "--build", str(build_dir), "--config", "Debug", "--parallel", "2"], 25, str(root))
+            if built.timed_out:
                 return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "error": "CMake derlemesi süre sınırını aştı. / Сборка CMake превысила лимит времени.", "elapsed_ms": round((time.perf_counter()-started)*1000)}
             if built.returncode:
                 message = (built.stdout + built.stderr)[-6000:]
@@ -110,14 +159,13 @@ def build_project(files: dict[str, str], input_text: str = "", mode: str = "g++"
             command = [str(exe)]
             cwd = str(root)
         if mode == "g++":
-            try:
-                built = subprocess.run(command, capture_output=True, text=True, timeout=20, cwd=cwd, encoding="utf-8", errors="replace", creationflags=no_window)
-            except subprocess.TimeoutExpired:
+            built = run_tool(command, 20, cwd)
+            if built.timed_out:
                 return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "error": "Derleme 20 saniyede tamamlanmadı. / Компиляция не завершилась за 20 секунд.", "elapsed_ms": round((time.perf_counter()-started)*1000)}
             if built.returncode:
                 message = (built.stdout + built.stderr)[-6000:]
                 return {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": message, "error": message, "elapsed_ms": round((time.perf_counter()-started)*1000)}
-        run, timed_out, overflowed = run_limited(command if mode == "cmake" else [str(exe)], input_text, 3, cwd, no_window)
+        run, timed_out, overflowed = run_limited(command if mode == "cmake" else [str(exe)], input_text, 3, resources_dir=root)
         if overflowed:
             return {"ok": False, "phase": "output_limit", "compile_ok": True, "compile_output": "", "stdout": run.stdout[-6000:], "stderr": "", "exit_code": None, "elapsed_ms": round((time.perf_counter()-started)*1000), "error": "Program çok fazla çıktı üretti (64 KB sınırı). / Программа вывела слишком много данных (лимит 64 КБ)."}
         if timed_out:

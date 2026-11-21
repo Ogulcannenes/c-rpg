@@ -106,9 +106,12 @@ class Phase1RegressionTests(unittest.TestCase):
     # 5. Import overwrote PIN-protected profiles without asking for the PIN.
     def test_import_requires_pin_for_protected_profile(self):
         pid = self.make_profile("Locked", pin="4321")
+        status, _ = self.request("GET", f"/api/export?profile_id={pid}")
+        self.assertEqual(status, 403)  # locked profiles cannot even be exported before the PIN is entered
+        self.assertEqual(self.request("POST", "/api/select", {"profile_id": pid, "pin": "4321"})[0], 200)
         _, save = self.request("GET", f"/api/export?profile_id={pid}")
         status, _ = self.request("POST", "/api/import", {"profile_id": pid, "save": save})
-        self.assertEqual(status, 403)
+        self.assertEqual(status, 403)  # replacing all progress still needs the PIN itself
         status, result = self.request("POST", "/api/import", {"profile_id": pid, "save": save, "pin": "4321"})
         self.assertEqual(status, 200, result)
 

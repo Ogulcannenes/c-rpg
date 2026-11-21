@@ -88,7 +88,12 @@ class ClaudeTutorTests(unittest.TestCase):
             self.assertTrue(info["claude_configured"])
             self.assertNotIn(key, json.dumps(info))
             self.assertEqual(info["claude_key_hint"], "…WXYZ")
-            self.assertEqual(server.CLAUDE_KEY_FILE.read_text(encoding="utf-8"), key)
+            # Stored encrypted (DPAPI on Windows): no plaintext copy anywhere on disk, but it round-trips.
+            if server.os.name == "nt":
+                self.assertFalse(server.CLAUDE_KEY_FILE.exists())
+                stored = (server.SECRETS_DIR / "anthropic_api_key.dpapi").read_bytes()
+                self.assertNotIn(key.encode(), stored)
+            self.assertEqual(server.claude_api_key(), key)
             self.assertNotIn(key.encode(), server.DB_PATH.read_bytes())
             status, removed = self.request("POST", "/api/ai/claude-key", {"profile_id": pid, "key": ""})
             self.assertFalse(removed["claude_configured"])

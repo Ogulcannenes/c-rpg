@@ -1,4 +1,6 @@
 (() => {
+  // Labels can contain the profile name (user input): always escape before putting them in an attribute.
+  const escAttr = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const ASSET = '/assets/cat-wearables.svg#';
   const SVG_ITEMS = {wizard:'wizard',crown:'crown',bow:'bow',headset:'headset',scarf:'scarf',moon:'moon-cape',backpack:'backpack',raincoat:'raincoat',yarn:'yarn',fish:'fish',shades:'shades',bowtie:'bowtie',mug:'mug',cape:'cape',wings:'wings',aura:'aura'};
   const BACK_ITEMS = ['aura','wings','cape','moon','backpack'];
@@ -49,7 +51,7 @@
     const worn = new Set(Object.values(equipment||{})), fresh = id => lastWorn && !lastWorn.has(id) ? ' just-worn' : '';
     const overlays = ordered.filter(id=>worn.has(id)).map(id=>`<svg viewBox="0 0 1199 1312" preserveAspectRatio="none" class="cat-wearable cat-wearable-front slot-${SHOP_ITEMS_UI[id].slot}${fresh(id)}" data-wearable="${id}" aria-hidden="true">${alignFor(growth?.id)}<use href="${ASSET}${SVG_ITEMS[id]}" width="1199" height="1312"></use></g></svg>`).join('');
     const stageClass=growth?`growth-${growth.id}`:'';
-    const html = `<div class="cat-stage cat-layered ${large?'cat-stage-large':''} ${stageClass}" role="img" aria-label="${label}" data-cat-level="${catLevel}"><div class="cat-growth-model">${wearLayers(equipment,growth?.id)}<img class="cat-companion-base" src="${growth?.asset||'/assets/cat-companion.png'}" alt="">${faceLayer(growth?.id)}<span class="cat-wearable-anchor">${overlays}</span></div></div>`;
+    const html = `<div class="cat-stage cat-layered ${large?'cat-stage-large':''} ${stageClass}" role="img" aria-label="${escAttr(label)}" data-cat-level="${catLevel}"><div class="cat-growth-model">${wearLayers(equipment,growth?.id)}<img class="cat-companion-base" src="${growth?.asset||'/assets/cat-companion.png'}" alt="">${faceLayer(growth?.id)}<span class="cat-wearable-anchor">${overlays}</span></div></div>`;
     lastWorn = worn;
     return html;
   };

@@ -10,7 +10,8 @@ from __future__ import annotations
 import json
 import re
 import shutil
-import subprocess
+
+from sandbox import run_tool, source_policy_violation
 
 
 RULES = {
@@ -87,9 +88,12 @@ def _main_ast(source):
     if not clang:
         return None
     command = [clang, "-std=c++20", "-Xclang", "-ast-dump=json", "-Xclang", "-ast-dump-filter=main", "-fsyntax-only", "-x", "c++", "-"]
+    if source_policy_violation(source):
+        return None
     try:
-        result = subprocess.run(command, input=source, capture_output=True, text=True, timeout=8, encoding="utf-8", errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if result.returncode or not result.stdout or len(result.stdout) > 6_000_000:
+        # clang runs inside a memory-capped Job Object (template bombs cannot exhaust RAM).
+        result = run_tool(command, 8, None, input_text=source)
+        if result.timed_out or result.returncode or not result.stdout or len(result.stdout) > 6_000_000:
             return None
         decoder, offset, main = json.JSONDecoder(), 0, None
         while offset < len(result.stdout):
@@ -103,7 +107,7 @@ def _main_ast(source):
                 main = item
                 break
         return main
-    except (OSError, subprocess.TimeoutExpired, ValueError, json.JSONDecodeError):
+    except (OSError, ValueError, json.JSONDecodeError):
         return None
 
 

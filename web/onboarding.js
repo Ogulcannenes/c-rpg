@@ -37,7 +37,7 @@
     paintWizard(true);
     document.removeEventListener('keydown', keys);
     document.addEventListener('keydown', keys);
-    setTimeout(() => $(`#onboard-overlay .ob-card[data-i="${wiz.index}"]`)?.focus(), 80);
+    setTimeout(() => $(`#onboard-overlay .ob-card[data-idx="${wiz.index}"]`)?.focus(), 80);
   }
 
   function overlay() {
@@ -83,9 +83,9 @@
     $('.ob-error', host).textContent = wiz.error || '';
     const body = $('.ob-body', host), actions = $('.ob-actions', host);
     if (wiz.step === 0) {
-      body.innerHTML = `<div class="ob-grid" role="radiogroup" aria-label="${esc(T('Karakterler', 'Персонажи'))}">${CHARS.map((ch, i) => `<button type="button" role="radio" aria-checked="${i === wiz.index}" class="ob-card ${i === wiz.index ? 'selected' : ''}" data-i="${i}" style="--c:${ch.color}"><img src="/assets/${ch.img}" alt="" draggable="false"><b>${esc(pick(ch.name))}</b></button>`).join('')}</div>
+      body.innerHTML = `<div class="ob-grid" role="radiogroup" aria-label="${esc(T('Karakterler', 'Персонажи'))}">${CHARS.map((ch, i) => `<button type="button" role="radio" aria-checked="${i === wiz.index}" class="ob-card ${i === wiz.index ? 'selected' : ''}" data-idx="${i}" style="--c:${ch.color}"><img src="/assets/${ch.img}" alt="" draggable="false"><b>${esc(pick(ch.name))}</b></button>`).join('')}</div>
         <article class="ob-info"><h2>${esc(pick(c.name))}</h2><p>${esc(pick(c.role))}</p><ul class="ob-stats">${STAT_NAMES().map((n, i) => `<li><span>${esc(n)}</span><i><b style="--v:${c.stats[i] * 20}%"></b></i></li>`).join('')}</ul><small>${esc(T('← → ile karakterler arasında gezin, karaktere tıklayıp selam ver.', 'Листай персонажей стрелками ← →, нажми на персонажа, чтобы поздороваться.'))}</small></article>`;
-      $$('.ob-card', body).forEach(btn => btn.onclick = () => choose(+btn.dataset.i));
+      $$('.ob-card', body).forEach(btn => btn.onclick = () => choose(+btn.dataset.idx));
       actions.innerHTML = `<span></span><button type="button" class="primary ob-next">${esc(T('Bu karakterle devam et', 'Продолжить с этим персонажем'))} →</button>`;
     } else if (wiz.step === 1) {
       body.innerHTML = `<label class="ob-field"><span>${esc(T('Oyuncu adın', 'Имя игрока'))}</span><input id="ob-name" maxlength="24" autocomplete="off" spellcheck="false" placeholder="${esc(T('Örneğin Mira', 'Например, Мира'))}" value="${esc(wiz.name)}"></label><p class="ob-hint">${esc(T('2–24 karakter. Bu isim liderlik tablosunda ve kedi yoldaşının yanında görünür.', 'От 2 до 24 символов. Имя видно в таблице лидеров и рядом с котом-спутником.'))}</p>`;
@@ -165,7 +165,7 @@
   function choose(i) {
     wiz.index = (i + CHARS.length) % CHARS.length;
     paintWizard();
-    $(`#onboard-overlay .ob-card[data-i="${wiz.index}"]`)?.focus();
+    $(`#onboard-overlay .ob-card[data-idx="${wiz.index}"]`)?.focus();
   }
   function keys(event) {
     if (!wiz) return;

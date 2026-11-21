@@ -1,9 +1,10 @@
 """Safe local C++ concurrency simulation and compiler-output exploration."""
 from __future__ import annotations
 
-import subprocess
 import tempfile
 from pathlib import Path
+
+from sandbox import SandboxBusy, build_slot, run_tool, source_policy_violation
 
 
 def simulate_counter(workers: int = 2, increments: int = 3, use_mutex: bool = False) -> dict:
@@ -51,25 +52,30 @@ def assembly_outputs(source: str, compiler: str | None, max_source: int = 20_000
         return {"ok": False, "error": f"Kod {max_source} bayt sınırını aşıyor."}
     if not compiler:
         return {"ok": False, "error": "G++/Clang++ bulunamadı."}
+    policy_error = source_policy_violation(source)
+    if policy_error:
+        return {"ok": False, "error": policy_error}
     outputs = []
-    with tempfile.TemporaryDirectory(prefix="cpp-adventure-asm-") as folder:
-        root = Path(folder)
-        cpp = root / "explore.cpp"
-        cpp.write_text(source, encoding="utf-8")
-        for opt in ("O0", "O2"):
-            asm = root / f"{opt}.s"
-            try:
-                result = subprocess.run([compiler, "-std=c++20", "-S", f"-{opt}", "-masm=intel", "-fmax-errors=3", str(cpp), "-o", str(asm)],
-                                        cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=12)
-            except subprocess.TimeoutExpired:
-                outputs.append({"optimization": opt, "ok": False, "assembly": "", "errors": "Derleme 12 saniye sınırını aştı."})
-                continue
-            except OSError as error:
-                outputs.append({"optimization": opt, "ok": False, "assembly": "", "errors": str(error)[:2000]})
-                continue
-            text = asm.read_text(encoding="utf-8", errors="replace")[:12_000] if asm.exists() else ""
-            outputs.append({"optimization": opt, "ok": result.returncode == 0, "assembly": text,
-                            "errors": result.stderr[:4000], "truncated": len(text) >= 12_000})
+    try:
+        with build_slot(), tempfile.TemporaryDirectory(prefix="cpp-adventure-asm-") as folder:
+            root = Path(folder)
+            cpp = root / "explore.cpp"
+            cpp.write_text(source, encoding="utf-8")
+            for opt in ("O0", "O2"):
+                asm = root / f"{opt}.s"
+                try:
+                    result = run_tool([compiler, "-std=c++20", "-S", f"-{opt}", "-masm=intel", "-fmax-errors=3", str(cpp), "-o", str(asm)], 12, str(root))
+                except OSError as error:
+                    outputs.append({"optimization": opt, "ok": False, "assembly": "", "errors": str(error)[:2000]})
+                    continue
+                if result.timed_out:
+                    outputs.append({"optimization": opt, "ok": False, "assembly": "", "errors": "Derleme 12 saniye sınırını aştı."})
+                    continue
+                text = asm.read_text(encoding="utf-8", errors="replace")[:12_000] if asm.exists() else ""
+                outputs.append({"optimization": opt, "ok": result.returncode == 0, "assembly": text,
+                                "errors": result.stderr[:4000], "truncated": len(text) >= 12_000})
+    except SandboxBusy as exc:
+        return {"ok": False, "error": str(exc)}
     return {"ok": all(item["ok"] for item in outputs), "compiler": Path(compiler).name, "outputs": outputs,
             "notice_tr": "Çıktı bu bilgisayardaki derleyiciden üretildi; optimizasyon çıktısı derleyici sürümüne bağlıdır.",
             "notice_ru": "Вывод получен локальным компилятором; результат оптимизации зависит от версии компилятора."}

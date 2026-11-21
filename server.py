@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import re
+from collections import OrderedDict
 import shutil
 import sqlite3
 import subprocess
@@ -19,12 +21,14 @@ import time
 import webbrowser
 import urllib.request
 import urllib.error
+from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from curriculum import CURRICULUM
-from sandbox import normalize_output, run_limited
+from secret_store import delete_secret, read_secret, write_secret
+from sandbox import SandboxBusy, assembly_policy_violation, build_slot, isolation_status, normalize_output, run_limited, run_tool, source_policy_violation
 from concept_checker import check_cpp_concept
 from visual_labs import LABS, simulate as simulate_visual_lab, public_result as public_lab_result
 from lesson_scenes import scenes_for as lesson_scenes_for
@@ -77,10 +81,7 @@ def provider_key(provider):
     key = os.environ.get(spec["env"], "").strip()
     if key:
         return key
-    try:
-        return (SECRETS_DIR / spec["file"]).read_text(encoding="utf-8").strip()
-    except OSError:
-        return ""
+    return read_secret(SECRETS_DIR, spec["file"])  # DPAPI-encrypted on Windows
 
 
 def provider_key_from_env(provider):
@@ -89,21 +90,12 @@ def provider_key_from_env(provider):
 
 def save_provider_key(provider, key):
     spec, key = API_KEYS[provider], (key or "").strip()
-    path = SECRETS_DIR / spec["file"]
     if not key:
-        try:
-            path.unlink()
-        except OSError:
-            pass
+        delete_secret(SECRETS_DIR, spec["file"])
         return
     if not re.fullmatch(spec["pattern"], key):
         raise ValueError(spec["error"])
-    SECRETS_DIR.mkdir(parents=True, exist_ok=True)
-    path.write_text(key, encoding="utf-8")
-    try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass
+    write_secret(SECRETS_DIR, spec["file"], key)
 
 
 def claude_api_key():
@@ -286,6 +278,20 @@ def init_db():
 
 def all_tasks():
     return [task for chapter in CURRICULUM for task in chapter["tasks"]]
+
+
+TASK_XP = {task["id"]: int(task["xp"]) for chapter in CURRICULUM for task in chapter["tasks"]}
+LAB_XP = {lab["id"]: int(lab.get("xp", 0)) for lab in LABS}
+MAX_IMPORTED_XP = 1_000_000
+
+
+def clamp_int(value, low: int, high: int, default: int = 0) -> int:
+    """Coerce untrusted numbers (e.g. from an imported save) into [low, high]."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        number = default
+    return max(low, min(high, number))
 
 
 def plugin_directories():
@@ -556,33 +562,99 @@ def compile_and_run(source: str, input_text: str = ""):
         return {"ok": False, "phase": "validate", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": 0, "error": "Kod 20.000 karakter sınırını aşıyor."}
     if not isinstance(input_text, str) or len(input_text) > 2000:
         return {"ok": False, "phase": "validate", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": 0, "error": "Program girdisi metin olmalı ve 2.000 karakteri aşmamalı."}
+    policy_error = source_policy_violation(source)
+    if policy_error:
+        return {"ok": False, "phase": "validate", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": 0, "error": policy_error}
     started = time.perf_counter()
-    # The desktop app is a windowed process; hide child console windows on Windows.
-    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    with temporary_directory(prefix="cpp-adventure-") as temp:
-        src, exe = Path(temp) / "main.cpp", Path(temp) / "main.exe"
+    try:
+        with build_slot():
+            build = _compile_source(source)
+            if build["timed_out"]:
+                return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": build["compile_ms"], "run_ms": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "Derleme 15 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
+            compile_ms = build["compile_ms"]
+            if not build["ok"]:
+                compiler_output = build["output"][-6000:] or "Derleme başarısız."
+                return {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": compiler_output, "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": compiler_output}
+            warnings = build["output"][-6000:]
+            run_started = time.perf_counter()
+            run, timed_out, overflowed = run_limited([str(build["exe"])], input_text, 3)
+    except SandboxBusy as exc:
+        return {"ok": False, "phase": "busy", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": str(exc)}
+    except OSError as exc:  # isolation could not be applied: the program was not run (fail closed)
+        return {"ok": False, "phase": "sandbox_error", "compile_ok": True, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": f"Güvenli çalıştırma ortamı hazırlanamadı; program çalıştırılmadı. / Не удалось подготовить безопасную среду. ({exc})"}
+    run_ms = round((time.perf_counter() - run_started) * 1000)
+    elapsed = round((time.perf_counter() - started) * 1000)
+    common = {"compile_ok": True, "compile_output": warnings, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": elapsed, "sandbox": run.isolation, "compile_cached": build["cached"]}
+    if timed_out and not overflowed:
+        return {"ok": False, "phase": "run_timeout", "stdout": "", "output": "", "stderr": "", "exit_code": None, **common, "error": "Program 3 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
+    if overflowed:
+        return {"ok": False, "phase": "output_limit", "stdout": run.stdout[-6000:], "output": run.stdout[-6000:], "stderr": "", "exit_code": None, **common, "error": "Program çok fazla çıktı üretti (64 KB sınırı); güvenli biçimde durduruldu."}
+    stdout = run.stdout[-6000:]
+    stderr = run.stderr[-3000:]
+    return {"ok": run.returncode == 0, "phase": "complete" if run.returncode == 0 else "runtime", "stdout": stdout, "output": stdout, "stderr": stderr, "exit_code": run.returncode, **common, "error": "" if run.returncode == 0 else f"Program {run.returncode} çıkış koduyla sonlandı."}
+
+
+# Learner binaries are statically linked on Windows so they run inside the AppContainer,
+# which cannot read the MinGW runtime DLLs next to the compiler.
+COMPILE_FLAGS = ("-std=c++20", "-O0", "-Wall", "-Wextra", "-pipe")
+LINK_FLAGS = ("-pipe",) + (("-static",) if os.name == "nt" else ())
+COMPILE_CACHE_SIZE = 24
+_COMPILE_CACHE: "OrderedDict[str, dict]" = OrderedDict()
+_COMPILE_CACHE_LOCK = threading.Lock()
+_COMPILE_KEY_LOCKS: dict = {}
+_COMPILE_CACHE_DIR: list = []
+
+
+def _compile_cache_dir() -> Path:
+    if not _COMPILE_CACHE_DIR or not _COMPILE_CACHE_DIR[0].exists():
+        folder = Path(tempfile.mkdtemp(prefix="cpp-adventure-build-"))
+        atexit.register(shutil.rmtree, folder, True)
+        _COMPILE_CACHE_DIR[:] = [folder]
+    return _COMPILE_CACHE_DIR[0]
+
+
+def _compile_source(source: str) -> dict:
+    """Compile each distinct source once (several test inputs reuse the same binary).
+
+    Returns {"ok", "exe", "output", "compile_ms", "timed_out", "cached"}. Timeouts are not cached.
+    """
+    key = hashlib.sha256("\0".join((COMPILER, *COMPILE_FLAGS, *LINK_FLAGS, source)).encode("utf-8")).hexdigest()
+    with _COMPILE_CACHE_LOCK:
+        key_lock = _COMPILE_KEY_LOCKS.setdefault(key, threading.Lock())
+    with key_lock:
+        with _COMPILE_CACHE_LOCK:
+            hit = _COMPILE_CACHE.get(key)
+            if hit and (hit["exe"] is None or hit["exe"].exists()):
+                _COMPILE_CACHE.move_to_end(key)
+                return {**hit, "compile_ms": 0, "cached": True}
+        folder = _compile_cache_dir() / key[:32]
+        folder.mkdir(exist_ok=True)
+        src, asm, exe = folder / "main.cpp", folder / "main.s", folder / ("main.exe" if os.name == "nt" else "main")
         src.write_text(source, encoding="utf-8")
         compile_started = time.perf_counter()
-        try:
-            build = subprocess.run([COMPILER, "-std=c++20", "-O0", "-Wall", "-Wextra", "-pipe", str(src), "-o", str(exe)], capture_output=True, text=True, timeout=15, cwd=temp, encoding="utf-8", errors="replace", creationflags=creationflags)
-        except subprocess.TimeoutExpired:
-            elapsed = round((time.perf_counter() - started) * 1000)
-            return {"ok": False, "phase": "compile_timeout", "compile_ok": False, "compile_output": "", "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": round((time.perf_counter() - compile_started) * 1000), "run_ms": None, "elapsed_ms": elapsed, "error": "Derleme 15 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
-        compile_ms = round((time.perf_counter() - compile_started) * 1000)
-        if build.returncode:
-            compiler_output = (build.stderr or build.stdout)[-6000:] or "Derleme başarısız."
-            return {"ok": False, "phase": "compile", "compile_ok": False, "compile_output": compiler_output, "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": None, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": compiler_output}
-        run_started = time.perf_counter()
-        run, timed_out, overflowed = run_limited([str(exe)], input_text, 3, temp, creationflags)
-        if timed_out and not overflowed:
-            run_ms = round((time.perf_counter() - run_started) * 1000)
-            return {"ok": False, "phase": "run_timeout", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": "", "output": "", "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "Program 3 saniyede tamamlanmadı; güvenli biçimde durduruldu."}
-        run_ms = round((time.perf_counter() - run_started) * 1000)
-        if overflowed:
-            return {"ok": False, "phase": "output_limit", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": run.stdout[-6000:], "output": run.stdout[-6000:], "stderr": "", "exit_code": None, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "Program çok fazla çıktı üretti (64 KB sınırı); güvenli biçimde durduruldu."}
-        stdout = run.stdout[-6000:]
-        stderr = run.stderr[-3000:]
-        return {"ok": run.returncode == 0, "phase": "complete" if run.returncode == 0 else "runtime", "compile_ok": True, "compile_output": build.stderr[-6000:], "stdout": stdout, "output": stdout, "stderr": stderr, "exit_code": run.returncode, "compile_ms": compile_ms, "run_ms": run_ms, "elapsed_ms": round((time.perf_counter() - started) * 1000), "error": "" if run.returncode == 0 else f"Program {run.returncode} çıkış koduyla sonlandı."}
+        # Step 1: C++ -> assembly. Step 2 (assemble + link) only runs if the expanded assembly
+        # contains no .incbin/.include, so inline asm cannot read files at build time.
+        build = run_tool([COMPILER, *COMPILE_FLAGS, "-S", str(src), "-o", str(asm)], 15, str(folder))
+        output = build.stderr or build.stdout
+        if build.returncode == 0 and not build.timed_out:
+            violation = assembly_policy_violation(asm.read_text(encoding="utf-8", errors="replace"))
+            if violation:
+                build.returncode, output = 1, violation
+            else:
+                link = run_tool([COMPILER, *LINK_FLAGS, str(asm), "-o", str(exe)], 15, str(folder))
+                build.returncode, build.timed_out = link.returncode, link.timed_out
+                output = output + (link.stderr or link.stdout)
+        ok = build.returncode == 0 and not build.timed_out and exe.exists()
+        entry = {"ok": ok, "exe": exe if ok else None, "output": output, "timed_out": build.timed_out,
+                 "compile_ms": round((time.perf_counter() - compile_started) * 1000)}
+        if not build.timed_out:
+            with _COMPILE_CACHE_LOCK:
+                _COMPILE_CACHE[key] = entry
+                while len(_COMPILE_CACHE) > COMPILE_CACHE_SIZE:
+                    old_key, _ = _COMPILE_CACHE.popitem(last=False)
+                    _COMPILE_KEY_LOCKS.pop(old_key, None)
+                    shutil.rmtree(_compile_cache_dir() / old_key[:32], ignore_errors=True)
+        return {**entry, "cached": False}
 
 
 def diagnose_locally(task, source, input_text="", language="tr"):
@@ -716,12 +788,137 @@ def call_ai_provider(provider, prompt):
     return {"error": "AI sağlayıcısı kapalı."}
 
 
+# ---------------------------------------------------------------- local API security
+
+# 'unsafe-inline' scripts are still required by ~60 inline onclick handlers in the current
+# frontend; everything else (remote scripts, frames, plugins, form posts, foreign
+# connections) is blocked. Tighten script-src once the inline handlers are removed.
+CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+                           "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; "
+                           "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+AUTH_ERROR = {"error": "Oturum geçersiz; uygulamayı yeniden başlat. / Сессия недействительна, перезапусти приложение.", "code": "auth_required"}
+PIN_ERROR = {"error": "Bu profil kilitli; önce PIN ile aç. / Профиль заблокирован, сначала введи PIN.", "code": "pin_required", "pin_required": True}
+# Endpoints that check the PIN themselves or never act on a profile's data.
+PIN_EXEMPT_PATHS = {"/api/select", "/api/profiles", "/api/profile/update", "/api/profile/delete", "/api/import"}
+
+
+class LaunchAuth:
+    """Per-launch secret for the local API.
+
+    Browser-origin checks stop web pages, not other programs on the PC: anything that can
+    reach 127.0.0.1 could call /api/run. The window receives a one-time bootstrap code in its
+    start URL; redeeming it sets an HttpOnly, SameSite=Strict cookie that every /api/* call
+    must present. The token never appears in the page, so local processes cannot read it.
+    """
+
+    def __init__(self):
+        self.token = secrets.token_urlsafe(32)
+        self._codes: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def new_bootstrap_code(self, ttl: float = 120.0) -> str:
+        code = secrets.token_urlsafe(24)
+        with self._lock:
+            self._codes[code] = time.monotonic() + ttl
+        return code
+
+    def redeem(self, code: str) -> bool:
+        with self._lock:
+            expires = self._codes.pop(code, None) if isinstance(code, str) else None
+        return expires is not None and expires >= time.monotonic()
+
+    def cookie_matches(self, header: str | None, name: str) -> bool:
+        if not header:
+            return False
+        jar = SimpleCookie()
+        try:
+            jar.load(header)
+        except Exception:
+            return False
+        morsel = jar.get(name)
+        return morsel is not None and hmac.compare_digest(morsel.value, self.token)
+
+
+_UNLOCK_LOCK = threading.Lock()
+UNLOCKED_PROFILES: set = set()
+
+
+def valid_profile_name(name: str) -> bool:
+    """Letters in any script, digits, spaces and common punctuation; no markup or control characters."""
+    return not re.search(r"[\x00-\x1f\x7f<>`]", name)
+
+
+def unlock_profile(profile_id: str) -> None:
+    """Only the active profile stays unlocked; switching profiles locks the previous one."""
+    with _UNLOCK_LOCK:
+        UNLOCKED_PROFILES.clear()
+        UNLOCKED_PROFILES.add(profile_id)
+
+
+def lock_profile(profile_id: str) -> None:
+    with _UNLOCK_LOCK:
+        UNLOCKED_PROFILES.discard(profile_id)
+
+
+def profile_requires_unlock(profile_id) -> bool:
+    if not isinstance(profile_id, str) or not profile_id:
+        return False
+    with _UNLOCK_LOCK:
+        if profile_id in UNLOCKED_PROFILES:
+            return False
+    with db() as con:
+        row = con.execute("SELECT pin_hash FROM profiles WHERE id=?", (profile_id,)).fetchone()
+    return bool(row and row["pin_hash"])
+
+
 class Handler(SimpleHTTPRequestHandler):
+    auth: "LaunchAuth | None" = None  # set on app servers (create_app_server); None for in-process test servers
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT / "web"), **kwargs)
 
     def log_message(self, fmt, *args):
         print("[C++ Adventure] " + fmt % args)
+
+    def end_headers(self):
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
+        super().end_headers()
+
+    @property
+    def session_cookie_name(self) -> str:
+        # Cookies ignore the port, so the name carries it: two app windows never clobber each other.
+        return f"cppadv_session_{self.server.server_address[1]}"
+
+    def _authorized(self, path: str) -> bool:
+        if self.auth is None or not path.startswith("/api/"):
+            return True
+        return self.auth.cookie_matches(self.headers.get("Cookie"), self.session_cookie_name)
+
+    def _start_session(self):
+        code = parse_qs(urlparse(self.path).query).get("code", [""])[0]
+        if self.auth is not None and not self.auth.redeem(code):
+            body = "Bu oturum bağlantısı kullanıldı veya süresi doldu; uygulamayı yeniden başlat. / Ссылка сессии устарела, перезапусти приложение.".encode("utf-8")
+            self.send_response(403)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        self.send_response(302)
+        self.send_header("Location", "/")
+        if self.auth is not None:
+            self.send_header("Set-Cookie", f"{self.session_cookie_name}={self.auth.token}; HttpOnly; SameSite=Strict; Path=/")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def send_json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -767,6 +964,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_HEAD(self):
         if not self._request_allowed(False):
             return self.send_json({"error": "İstek reddedildi."}, 403)
+        if not self._authorized(urlparse(self.path).path):
+            return self.send_json(AUTH_ERROR, 401)
         return super().do_HEAD()
 
     def do_GET(self):
@@ -784,6 +983,12 @@ class Handler(SimpleHTTPRequestHandler):
         if not self._request_allowed(False):
             return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
+        if path == "/__session":
+            return self._start_session()
+        if not self._authorized(path):
+            return self.send_json(AUTH_ERROR, 401)
+        if path not in PIN_EXEMPT_PATHS and profile_requires_unlock(parse_qs(urlparse(self.path).query).get("profile_id", [""])[0]):
+            return self.send_json(PIN_ERROR, 403)
         if path == "/api/meta":
             return self.send_json({"app_version": APP_VERSION, "database_ready": DB_PATH.exists(), "compiler_ready": bool(COMPILER), "admin": ADMIN_ENABLED})
         if path == "/api/health":
@@ -798,7 +1003,7 @@ class Handler(SimpleHTTPRequestHandler):
                 status=MEMORYSTATUSEX();status.dwLength=__import__("ctypes").sizeof(status)
                 if __import__("ctypes").windll.kernel32.GlobalMemoryStatusEx(__import__("ctypes").byref(status)): memory_gb=round(status.ullTotalPhys/1024**3,1)
             except Exception: pass
-            return self.send_json({"python":platform.python_version(),"os":platform.platform(),"is_windows_11":platform.system()=="Windows" and int(platform.release())>=10,"cpu_threads":os.cpu_count(),"ram_gb":memory_gb,"compiler":COMPILER,"compiler_version":compiler_version,"sqlite":sqlite3.sqlite_version,"vscode":shutil.which("code"),"offline_assets":(ROOT/"web"/"vendor"/"vs"/"editor"/"editor.main.js").exists()})
+            return self.send_json({"python":platform.python_version(),"os":platform.platform(),"is_windows_11":platform.system()=="Windows" and int(platform.release())>=10,"cpu_threads":os.cpu_count(),"ram_gb":memory_gb,"compiler":COMPILER,"compiler_version":compiler_version,"sqlite":sqlite3.sqlite_version,"vscode":shutil.which("code"),"offline_assets":(ROOT/"web"/"vendor"/"vs"/"editor"/"editor.main.js").exists(),"sandbox":isolation_status()})
         if path == "/api/ai/status":
             params = __import__("urllib.parse", fromlist=["parse_qs"]).parse_qs(urlparse(self.path).query)
             profile_id = params.get("profile_id", [""])[0]
@@ -1043,8 +1248,12 @@ class Handler(SimpleHTTPRequestHandler):
         if not self._request_allowed(True):
             return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
+        if not self._authorized(path):
+            return self.send_json(AUTH_ERROR, 401)
         try:
             body = self.read_json(POST_BODY_LIMITS.get(path, 30_000))
+            if path not in PIN_EXEMPT_PATHS and profile_requires_unlock(body.get("profile_id")):
+                return self.send_json(PIN_ERROR, 403)
             if path == "/api/arena/submit":
                 profile_id = body.get("profile_id", "")
                 challenge = daily_challenge()
@@ -1126,6 +1335,7 @@ class Handler(SimpleHTTPRequestHandler):
                 pin = str(body.get("pin", ""))
                 lang = body.get("lang") if body.get("lang") in ("tr", "ru") else "tr"
                 if not name or len(name) < 2: return self.send_json({"error": "Имя должно содержать не менее 2 символов." if lang == "ru" else "İsim en az 2 karakter olmalı."}, 400)
+                if not valid_profile_name(name): return self.send_json({"error": "Имя содержит недопустимые символы." if lang == "ru" else "İsim izin verilmeyen karakterler içeriyor."}, 400)
                 if pin and not re.fullmatch(r"\d{4,8}", pin): return self.send_json({"error": "PIN должен содержать 4–8 цифр." if lang == "ru" else "PIN 4-8 rakam olmalı."}, 400)
                 profile_id = str(uuid.uuid4())
                 pin_hash = ""
@@ -1145,6 +1355,7 @@ class Handler(SimpleHTTPRequestHandler):
                     if not current: return self.send_json({"error": "Profil bulunamadı."}, 404)
                     if not self.verify_profile_pin(current, body.get("current_pin", "")): return self.send_json({"error": "Mevcut PIN hatalı. / Текущий PIN неверен.", "pin_required": True}, 403)
                     if name and len(name) < 2: return self.send_json({"error": "İsim en az 2 karakter olmalı. / Имя должно содержать не менее 2 символов."}, 400)
+                    if name and not valid_profile_name(name): return self.send_json({"error": "İsim izin verilmeyen karakterler içeriyor. / Имя содержит недопустимые символы."}, 400)
                     # Validate everything before the first write: an early return inside
                     # `with db()` commits, so a late 400 would persist earlier changes.
                     if pin not in ("", "REMOVE") and not re.fullmatch(r"\d{4,8}", pin):
@@ -1170,11 +1381,13 @@ class Handler(SimpleHTTPRequestHandler):
                     profile = valid_profile(con, profile_id)
                     if not profile or not self.verify_profile_pin(profile, pin): return self.send_json({"error": "Profil veya PIN hatalı."}, 403)
                     con.execute("DELETE FROM profiles WHERE id=?", (profile_id,))
+                    lock_profile(profile_id)
                 return self.send_json({"ok": True})
             if path == "/api/select":
                 with db() as con: profile = valid_profile(con, body.get("profile_id"))
                 if not profile or not self.verify_profile_pin(profile, body.get("pin", "")):
                     return self.send_json({"error": "Profil veya PIN hatalı."}, 403)
+                unlock_profile(profile["id"])
                 return self.send_json({"ok": True, "profile_id": profile["id"]})
             if path == "/api/import":
                 profile_id = body.get("profile_id")
@@ -1211,7 +1424,9 @@ class Handler(SimpleHTTPRequestHandler):
                     # Import replaces the whole profile, so a PIN-protected profile must be unlocked.
                     if not self.verify_profile_pin(target, body.get("pin", "")):
                         return self.send_json({"error": "PIN hatalı. / Неверный PIN.", "pin_required": True}, 403)
-                    con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (int(saved.get("xp",0)), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", int(saved.get("streak",0)), str(saved.get("last_day","")), saved.get("ai_provider") if saved.get("ai_provider") in ("offline","ollama","openai","claude","groq","off") else "offline", profile_id))
+                    last_day = str(saved.get("last_day", ""))
+                    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", last_day): last_day = ""
+                    con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (clamp_int(saved.get("xp"), 0, MAX_IMPORTED_XP), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", clamp_int(saved.get("streak"), 0, 3650), last_day, saved.get("ai_provider") if saved.get("ai_provider") in ("offline","ollama","openai","claude","groq","off") else "offline", profile_id))
                     con.execute("DELETE FROM completions WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM achievements WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM quiz_results WHERE profile_id=?", (profile_id,))
@@ -1230,12 +1445,12 @@ class Handler(SimpleHTTPRequestHandler):
                     con.execute("DELETE FROM study_sessions WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM arena_attempts WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM plugin_settings WHERE profile_id=?", (profile_id,))
-                    con.executemany("INSERT INTO completions(profile_id,task_id,xp,completed_at) VALUES(?,?,?,?)", [(profile_id, x["task_id"], int(x.get("xp",0)), str(x.get("completed_at","restored"))) for x in done])
+                    con.executemany("INSERT INTO completions(profile_id,task_id,xp,completed_at) VALUES(?,?,?,?)", [(profile_id, x["task_id"], clamp_int(x.get("xp"), 0, TASK_XP[x["task_id"]]), str(x.get("completed_at","restored"))[:40]) for x in done])
                     valid_badges = {"first_steps","cat_coder","quest_hunter","legend","project_builder","first_boss","bug_squasher","quiz_whiz","code_runner","chapter_clear","world_explorer","boss_hunter","streak_keeper","daily_star","shop_lover","stylish_cat","algorithmist", *(quest["id"] for quest in SECRET_QUESTS)}
                     con.executemany("INSERT INTO achievements(profile_id,id) VALUES(?,?)", [(profile_id, x["id"]) for x in badges if x.get("id") in valid_badges])
                     con.executemany("INSERT INTO quiz_results(profile_id,task_id,attempts,correct,last_answer,updated_at) VALUES(?,?,?,?,?,?)", [(profile_id, x["task_id"], int(x.get("attempts",0)), int(x.get("correct",0)), str(x.get("last_answer",""))[:200], str(x.get("updated_at","restored"))) for x in quiz_results if x.get("task_id") in allowed and next((t for t in all_tasks() if t["id"]==x.get("task_id")),{}).get("kind")=="quiz"])
                     con.executemany("INSERT INTO review_schedule(profile_id,task_id,due_at,interval_days) VALUES(?,?,?,?)", [(profile_id, x["task_id"], str(x.get("due_at","2099-01-01 00:00:00")), int(x.get("interval_days",1))) for x in reviews if x.get("task_id") in allowed])
-                    con.executemany("INSERT INTO daily_quests(profile_id,day,task_id,reward,completed) VALUES(?,?,?,?,?)", [(profile_id, x["day"], x["task_id"], int(x.get("reward",15)), int(x.get("completed",0))) for x in daily_quests if x.get("task_id") in allowed])
+                    con.executemany("INSERT INTO daily_quests(profile_id,day,task_id,reward,completed) VALUES(?,?,?,?,?)", [(profile_id, str(x["day"])[:10], x["task_id"], clamp_int(x.get("reward"), 0, 50, 15), int(bool(x.get("completed")))) for x in daily_quests if isinstance(x, dict) and x.get("task_id") in allowed and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(x.get("day", "")))])
                     con.executemany("INSERT INTO shop_items(profile_id,item_id,bought_at) VALUES(?,?,?)", [(profile_id, x["item_id"], str(x.get("bought_at","restored"))) for x in shop_items if x.get("item_id") in SHOP])
                     active_item = saved.get("active_item", "")
                     if active_item and active_item not in {x.get("item_id") for x in shop_items}:
@@ -1269,7 +1484,7 @@ class Handler(SimpleHTTPRequestHandler):
                         clean_equipment = {slot: item_id for slot, item_id in raw_equipment.items() if slot in valid_slots and SHOP.get(item_id, {}).get("slot") == slot and item_id in owned_item_ids}
                         con.execute("INSERT INTO companion_loadouts(profile_id,loadout_id,name,equipment_json,created_at,updated_at) VALUES(?,?,?,?,?,?)", (profile_id, loadout_id, name, json.dumps(clean_equipment, ensure_ascii=False), str(loadout.get("created_at", "restored"))[:40], str(loadout.get("updated_at", "restored"))[:40]))
                     project_ids={p["id"] for p in PROJECTS}
-                    con.executemany("INSERT INTO project_submissions(profile_id,project_id,code,score,completed,awarded,updated_at) VALUES(?,?,?,?,?,?,?)", [(profile_id,x["project_id"],str(x.get("code",""))[:MAX_SOURCE],int(x.get("score",0)),int(x.get("completed",0)),int(x.get("awarded",0)),str(x.get("updated_at","restored"))) for x in project_submissions if x.get("project_id") in project_ids])
+                    con.executemany("INSERT INTO project_submissions(profile_id,project_id,code,score,completed,awarded,updated_at) VALUES(?,?,?,?,?,?,?)", [(profile_id,x["project_id"],str(x.get("code",""))[:MAX_SOURCE],clamp_int(x.get("score"),0,100),int(bool(x.get("completed"))),int(bool(x.get("awarded"))),str(x.get("updated_at","restored"))[:40]) for x in project_submissions if isinstance(x, dict) and x.get("project_id") in project_ids])
                     for workspace in project_workspaces[:8]:
                         raw_files = workspace.get("files")
                         if raw_files is None:
@@ -1286,14 +1501,20 @@ class Handler(SimpleHTTPRequestHandler):
                             question_ids=json.loads(session.get("questions_json","[]")); answers=json.loads(session.get("answers_json","[]"))
                             valid_question_ids={q["id"] for q in INTERVIEW_BANK}
                             if not isinstance(question_ids,list) or not isinstance(answers,list) or len(question_ids)>5 or any(qid not in valid_question_ids for qid in question_ids): continue
-                            con.execute("INSERT INTO interview_sessions(profile_id,session_id,lang,questions_json,answers_json,score,completed,started_at,completed_at) VALUES(?,?,?,?,?,?,?,?,?)",(profile_id,session["session_id"],session.get("lang") if session.get("lang") in ("tr","ru") else "tr",json.dumps(question_ids),json.dumps(answers)[:30000],max(0,min(5,int(session.get("score",0)))),int(bool(session.get("completed"))),str(session.get("started_at","restored")),str(session.get("completed_at",""))))
+                            # Rebuild answers from known fields instead of truncating serialized JSON
+                            # (a cut string is invalid JSON and broke /api/career and /api/interview).
+                            answers=[{"question_id":str(a.get("question_id",""))[:40],"topic":str(a.get("topic",""))[:40],"kind":"code" if a.get("kind")=="code" else "choice","correct":bool(a.get("correct"))} for a in answers[:len(question_ids)] if isinstance(a,dict)]
+                            started_at=str(session.get("started_at",""))
+                            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?", started_at): started_at="2000-01-01 00:00:00"  # unknown start = long expired
+                            score=sum(1 for a in answers if a["correct"])
+                            con.execute("INSERT INTO interview_sessions(profile_id,session_id,lang,questions_json,answers_json,score,completed,started_at,completed_at) VALUES(?,?,?,?,?,?,?,?,?)",(profile_id,session["session_id"],session.get("lang") if session.get("lang") in ("tr","ru") else "tr",json.dumps(question_ids),json.dumps(answers),score,int(bool(session.get("completed"))),started_at,str(session.get("completed_at",""))[:40]))
                         except (TypeError,ValueError,KeyError): continue
                     valid_portfolio_ids={p["id"] for p in PROJECTS}
                     con.executemany("INSERT INTO portfolio_notes(profile_id,project_id,description,technologies,updated_at) VALUES(?,?,?,?,?)",[(profile_id,item["project_id"],str(item.get("description",""))[:1000],str(item.get("technologies",""))[:200],str(item.get("updated_at","restored"))) for item in portfolio_notes if isinstance(item,dict) and item.get("project_id") in valid_portfolio_ids])
                     chapter_ids = {task["id"]: chapter["id"] for chapter in CURRICULUM for task in chapter["tasks"]}
                     con.executemany("INSERT INTO learning_events(profile_id,task_id,chapter_id,correct,error_kind,hint_used,created_at) VALUES(?,?,?,?,?,?,?)", [(profile_id,x["task_id"],chapter_ids[x["task_id"]],int(bool(x.get("correct",0))),str(x.get("error_kind",""))[:40],int(bool(x.get("hint_used",0))),str(x.get("created_at","restored"))[:40]) for x in learning_events[:5000] if x.get("task_id") in chapter_ids])
                     lab_ids = {lab["id"] for lab in LABS}
-                    con.executemany("INSERT INTO lab_awards(profile_id,lab_id,xp,created_at) VALUES(?,?,?,?)", [(profile_id,x["lab_id"],int(x.get("xp",0)),str(x.get("created_at","restored"))[:40]) for x in lab_awards if x.get("lab_id") in lab_ids])
+                    con.executemany("INSERT INTO lab_awards(profile_id,lab_id,xp,created_at) VALUES(?,?,?,?)", [(profile_id,x["lab_id"],clamp_int(x.get("xp"),0,LAB_XP.get(x["lab_id"],0)),str(x.get("created_at","restored"))[:40]) for x in lab_awards if isinstance(x, dict) and x.get("lab_id") in lab_ids])
                     allowed_modules = {"git", "conflict", "cmake", "testing", "terminal"}
                     for item in devtools_state:
                         if not isinstance(item, dict) or item.get("module") not in allowed_modules: continue
@@ -1868,12 +2089,27 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": f"Yerel sunucu hatası: {exc}"}, 500)
 
 
+def create_app_server(port: int = 0):
+    """HTTP server for the real app: loopback only, per-launch API secret, fresh PIN locks.
+
+    Binding port 0 lets the OS pick a free port atomically (no probe-then-rebind race).
+    Returns (server, auth, start_url); open start_url in the window to establish the session.
+    """
+    auth = LaunchAuth()
+    handler = type("AppHandler", (Handler,), {"auth": auth})
+    httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    with _UNLOCK_LOCK:
+        UNLOCKED_PROFILES.clear()
+    start_url = f"http://127.0.0.1:{httpd.server_address[1]}/__session?code={auth.new_bootstrap_code()}"
+    return httpd, auth, start_url
+
+
 def main():
     init_db()
-    server = ThreadingHTTPServer(("127.0.0.1", 8765), Handler)
+    server, _auth, start_url = create_app_server(8765)
     print("C++ Adventure hazır: http://127.0.0.1:8765")
     print("Kapatmak için bu pencereyi kapatın veya Ctrl+C kullanın.")
-    threading.Timer(0.8, lambda: webbrowser.open("http://127.0.0.1:8765")).start()
+    threading.Timer(0.8, lambda: webbrowser.open(start_url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
