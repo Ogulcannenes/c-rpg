@@ -197,3 +197,40 @@ save v2 round trip incl. `ai_usage` and v1 compatibility; whole-database backup.
    `%LOCALAPPDATA%\CppAdventure\data\adventure.db`, after moving the current file aside.
 3. Delete `adventure.db-wal` / `adventure.db-shm` next to it only if they belong to the file you replaced.
 4. Start the app; any needed migration runs automatically (with its own backup first).
+
+**Results (Phase 3):** run 1: 221 OK; run 2: 1 failure — caused by my own mid-run Phase 4 edit
+(route tables were written with single quotes and `test_lesson_scenes` greps `server.py` for
+`"/api/lesson-scenes"`), not by Phase 3 code; run 3 (with the quote fix): 228 OK.
+
+## Phase 4 — Backend architecture (2026-11-21)
+
+Scope decision: `server.py` stays the composition root that owns configuration (`DB_PATH`,
+`DATA_ROOT`, `SECRETS_DIR`, `COMPILER`), because 12 test modules patch those module globals; moving
+them would silently point tests at the real database. AI provider extraction is done in Phase 9,
+where that code is rewritten anyway.
+
+- **Route tables:** the ~70-branch `if path == ...` chains in `do_GET`/`do_POST` were split
+  mechanically (AST-based script, dry-run first) into one `Handler` method per endpoint
+  (`_get_*`, `_post_*`) plus `GET_ROUTES` / `POST_ROUTES`. The dry run caught that a naive split
+  would have deleted the session/PIN checks (they sat between the `/__session` branch and the API
+  branches); the script refuses to transform when non-route statements are inside the chain.
+  Dispatch order is unchanged: host/origin checks → `/__session` → session cookie → PIN lock →
+  route. Unknown `/api/*` GETs now answer JSON 404 instead of the static-file HTML 404.
+- **`content_index.py`:** O(1) `task()`, `chapter_of()`, `boss_of()` replace 10 linear
+  `next(... CURRICULUM ...)` scans (some raised `StopIteration` for unknown ids). Invariants checked
+  at import: unique ids, every chapter ends with its boss, prerequisites exist.
+- A daily quest that points at removed content is moved to a valid task instead of making
+  `/api/state` fail for that profile (Code Reviewer finding #2).
+- Repeated `__import__("urllib.parse"...)`/`__import__("collections")` replaced by normal imports.
+- **Strict CSP:** the only inline script (Monaco bootstrap) moved to `web/monaco-boot.js`, the only
+  inline handler (`onclick="renderSettings()"`) replaced by a listener, so `script-src` is now
+  `'self'` only. (The audit's "63 inline onclick handlers" were `.onclick =` property assignments
+  in JS, which CSP does not restrict.) `MonacoReady` now always settles (resolves `null` on load
+  failure, error kept in `window.MonacoLoadError`).
+- Verified in Chrome with a throwaway DB: no CSP violations; Monaco editor and its web worker load;
+  the settings button works.
+
+**Known remaining structure debt:** `server.py` is still ~2,300 lines (route bodies keep inline SQL);
+services/repositories split is incremental work for later phases.
+
+**Results (Phase 4):** full suite three consecutive runs: 230 OK / 230 OK / 230 OK (~207–215 s).

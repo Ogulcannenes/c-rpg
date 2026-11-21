@@ -82,7 +82,7 @@
     <div class="side-bottom"><div class="streak"><span>🔥</span><span><b id="streak-count">0</b> <span data-i="streak">günlük seri</span></span></div><div class="local-note"><span class="online-dot"></span><span data-i="local">Tamamen yerel · İnternet gerekmez</span></div></div>
   </aside>
   <main class="main">
-    <header class="topbar"><div class="breadcrumbs"><span>C++ Adventure</span><span class="crumb-sep">/</span><b id="crumb-current" data-i="home">Ana üs</b></div><div class="top-actions"><button id="lang-btn" class="lang-btn" data-i-aria="languageToggleLabel" aria-label="Dili değiştir">🇷🇺 Русский</button><button class="icon-button" id="settings-open" data-i-title="settingsTitle" title="AI / settings" onclick="renderSettings()">⚙</button><button class="icon-button" id="sound-btn" data-i-title="soundTitle" title="Meow">♫</button><button class="top-avatar" id="top-profile" data-i-title="profilesTitle" aria-label="Profiles">🐱</button></div></header>
+    <header class="topbar"><div class="breadcrumbs"><span>C++ Adventure</span><span class="crumb-sep">/</span><b id="crumb-current" data-i="home">Ana üs</b></div><div class="top-actions"><button id="lang-btn" class="lang-btn" data-i-aria="languageToggleLabel" aria-label="Dili değiştir">🇷🇺 Русский</button><button class="icon-button" id="settings-open" data-i-title="settingsTitle" title="AI / settings">⚙</button><button class="icon-button" id="sound-btn" data-i-title="soundTitle" title="Meow">♫</button><button class="top-avatar" id="top-profile" data-i-title="profilesTitle" aria-label="Profiles">🐱</button></div></header>
     <div id="toast" class="toast" role="status"></div>
     <section id="view-home" class="view"></section>
     <section id="view-map" class="view hidden"></section>
@@ -103,7 +103,7 @@
   </main>
 </div>
 <script src="/vendor/vs/loader.js"></script>
-<script>require.config({paths:{vs:'/vendor/vs'}});window.MonacoReady=new Promise(resolve=>require(['vs/editor/editor.main'],()=>resolve(window.monaco)));</script>
+<script src="/monaco-boot.js"></script>
 <script src="/i18n.js"></script>
 <script src="/splash.js"></script>
 <script src="/pin-cat.js"></script>
