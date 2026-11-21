@@ -74,7 +74,9 @@ class MigrationTests(unittest.TestCase):
         applied = db_migrations.migrate(self.db, context=CONTEXT, backup_dir=self.backups)
         self.assertEqual(applied, [m[0] for m in db_migrations.MIGRATIONS])
         tables, indexes = table_names(self.db)
-        self.assertEqual(len(tables - {"sqlite_sequence"}), len(db_migrations.BASELINE_TABLES))
+        # Baseline tables plus the ones later migrations add (m4: hint_reveals).
+        self.assertEqual(len(tables - {"sqlite_sequence", "hint_reveals"}), len(db_migrations.BASELINE_TABLES))
+        self.assertIn("hint_reveals", tables)
         self.assertTrue(EXPECTED_INDEXES <= indexes)
         self.assertEqual(version_of(self.db), db_migrations.LATEST_VERSION)
         self.assertFalse(self.backups.exists())

@@ -807,7 +807,9 @@ class CoreSystemTests(unittest.TestCase):
         completed = False
         while not completed:
             if question["kind"] == "choice":
-                answer = 0
+                # Options are shuffled per session; answer by the correct option's text.
+                bank = next(q for q in server.INTERVIEW_BANK if q["id"] == question["id"])
+                answer = next(question["options"].index(bank["options"][lang][bank["answer"]]) for lang in ("tr", "ru") if bank["options"][lang][bank["answer"]] in question["options"])
             elif question["id"] == "reverse_values":
                 answer = "#include <iostream>\n#include <vector>\nint main(){int n;std::cin>>n;std::vector<int> a(n);for(int& x:a)std::cin>>x;for(int i=n-1;i>=0;--i){if(i<n-1)std::cout<<' ';std::cout<<a[i];}}"
             else:

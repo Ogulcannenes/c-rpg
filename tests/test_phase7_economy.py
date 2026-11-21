@@ -55,6 +55,9 @@ class Phase7EconomyTests(unittest.TestCase):
             self.assertFalse(SECRET_FIELDS & set(task), task["id"])
             if task["kind"] in ("quiz", "predict"):
                 self.assertNotIn("tests", task, task["id"])
+                self.assertNotIn("hints", task, task["id"])
+            if task["kind"] == "predict":
+                self.assertNotIn("starter", task, "a prediction's starter is its answer")
             elif "tests" in task:
                 self.assertEqual(len(task["tests"]), 1, task["id"])
                 self.assertEqual(task["test_count"], len(server.content_index.task(task["id"])["tests"]))
@@ -97,6 +100,44 @@ class Phase7EconomyTests(unittest.TestCase):
         self.assertEqual(cache_header("/app.js"), (200, "no-cache"))
         self.assertEqual(cache_header("/vendor/vs/loader.js"), (200, "public, max-age=86400"))
         self.assertEqual(cache_header("/api/health")[1], "no-store")
+
+    def test_interview_options_are_shuffled_and_graded_by_meaning(self):
+        choice = [q for q in server.INTERVIEW_BANK if q["kind"] == "choice"]
+        orders = {tuple(server.interview_option_order(f"s{i}", q)) for i in range(20) for q in choice}
+        self.assertGreater(len(orders), 1, "the first option must not always be the right one")
+        for q in choice:
+            self.assertEqual(server.interview_option_order("same", q), server.interview_option_order("same", q))
+        pid = self.profile("Interviewee")
+        first_choice = [q["id"] for q in choice]
+        with patch.object(server, "select_interview_questions", lambda session_id, n: [q for q in server.INTERVIEW_BANK if q["id"] in first_choice][:n]):
+            _, started = self.request("POST", "/api/interview/start", {"profile_id": pid})
+        question = started["question"]
+        self.assertEqual(question["kind"], "choice")
+        bank = next(q for q in server.INTERVIEW_BANK if q["id"] == question["id"])
+        right = question["options"].index(bank["options"]["tr"][bank["answer"]])
+        wrong = (right + 1) % len(question["options"])
+        _, result = self.request("POST", "/api/interview/answer", {"profile_id": pid, "session_id": started["session_id"], "index": 0, "answer": right})
+        self.assertTrue(result["correct"], result)
+        _, bad = self.request("POST", "/api/interview/answer", {"profile_id": pid, "session_id": started["session_id"], "index": 1, "answer": 99})
+        self.assertFalse(bad.get("correct"), bad)
+        self.assertNotEqual(right, wrong)
+
+    def test_hints_are_revealed_by_the_server_and_cost_xp_even_if_the_client_hides_it(self):
+        pid = self.profile("Hint Taker")
+        _, data = self.request("GET", f"/api/state?profile_id={pid}")
+        public = next(t for ch in data["curriculum"] for t in ch["tasks"] if t["kind"] == "quiz" and t.get("hint_count"))
+        self.assertNotIn("hints", public)
+        task = server.content_index.task(public["id"])
+        self.assertEqual(self.request("POST", "/api/hint", {"profile_id": pid, "task_id": task["id"], "level": 1})[0], 409, "hints open in order")
+        status, hint = self.request("POST", "/api/hint", {"profile_id": pid, "task_id": task["id"], "level": 0, "lang": "ru"})
+        self.assertEqual(status, 200)
+        self.assertEqual(hint["hint"], task["hints"]["ru"][0])
+        self.assertEqual(self.request("POST", "/api/hint", {"profile_id": pid, "task_id": task["id"], "level": 99})[0], 404)
+        self.assertEqual(self.request("POST", "/api/hint", {"profile_id": "nobody", "task_id": task["id"], "level": 0})[0], 404)
+        answer = task["answer"]["tr"] if isinstance(task["answer"], dict) else task["answer"]
+        _, result = self.request("POST", "/api/submit", {"profile_id": pid, "task_id": task["id"], "answer": answer, "hint_used": False})
+        self.assertTrue(result["correct"], result)
+        self.assertEqual(result["xp"], max(1, int(task["xp"] * 0.9)))
 
     def test_arena_cannot_claim_a_faster_time_than_the_server_saw(self):
         pid = self.profile("Speedrunner")

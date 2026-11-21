@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import random
 import re
 from collections import Counter, OrderedDict
 import shutil
@@ -247,12 +248,17 @@ def all_tasks():
 
 # What the browser may see of a task. Answers, expected outputs, hidden tests and concept rules
 # stay on the server; code tasks expose one worked example and how many tests will be run.
-PUBLIC_TASK_FIELDS = ("id", "kind", "xp", "title", "prompt", "starter", "hints", "requires", "input", "bug_type")
+PUBLIC_TASK_FIELDS = ("id", "kind", "xp", "title", "prompt", "starter", "requires", "input", "bug_type")
 EXAMPLE_TASK_KINDS = {"code", "fix", "boss"}
 
 
 def public_task(task):
     view = {key: task[key] for key in PUBLIC_TASK_FIELDS if key in task}
+    if task.get("kind") == "predict":
+        view.pop("starter", None)  # a prediction's starter is its answer
+    # Hint text is revealed one level at a time by POST /api/hint, which records the use.
+    if isinstance(task.get("hints"), dict) and task["hints"]:
+        view["hint_count"] = max(len(items) for items in task["hints"].values())
     tests = task.get("tests") or []
     if task.get("kind") in EXAMPLE_TASK_KINDS and tests:
         example = next((case for case in tests if str(case.get("expected", "")).strip()), tests[0])
@@ -730,9 +736,22 @@ def analyze_code_quality(source, language="tr"):
     return {"score": score, "metrics": {"characters": len(source), "lines": len(lines), "nonempty_lines": len(meaningful), "functions": function_count, "branch_points": branches, "long_lines": len(long_lines), "duplicate_lines": len(repeated)}, "issues": issues, "basis": "static_heuristics"}
 
 
-def public_interview_question(question, language):
+def interview_option_order(session_id, question):
+    """Display order of a choice question's options, fixed per session.
+
+    The bank stores the correct option first; without shuffling, always picking
+    the first option scored 100%.
+    """
+    order = list(range(len(question["options"]["tr"])))
+    random.Random(f"{session_id}:{question['id']}").shuffle(order)
+    return order
+
+
+def public_interview_question(question, language, session_id=""):
     public={"id":question["id"],"kind":question["kind"],"topic":question["topic"],"prompt":question["prompt"][language]}
-    if question["kind"]=="choice": public["options"]=question["options"][language]
+    if question["kind"]=="choice":
+        options=question["options"][language]
+        public["options"]=[options[i] for i in interview_option_order(session_id, question)]
     else: public["starter"]=question["starter"]
     return public
 
@@ -1269,6 +1288,7 @@ class Handler(SimpleHTTPRequestHandler):
             con.execute("DELETE FROM interview_sessions WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM portfolio_notes WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM learning_events WHERE profile_id=?", (profile_id,))
+            con.execute("DELETE FROM hint_reveals WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM lab_awards WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM devtools_state WHERE profile_id=?", (profile_id,))
             con.execute("DELETE FROM study_sessions WHERE profile_id=?", (profile_id,))
@@ -1643,7 +1663,7 @@ class Handler(SimpleHTTPRequestHandler):
             language=profile["lang"]
             question_ids=[question["id"] for question in select_interview_questions(session_id,5)]
             con.execute("INSERT INTO interview_sessions(profile_id,session_id,lang,questions_json) VALUES(?,?,?,?)",(profile_id,session_id,language,json.dumps(question_ids)))
-        return self.send_json({"session_id":session_id,"index":0,"total":len(question_ids),"deadline_seconds":900,"question":public_interview_question(next(question for question in INTERVIEW_BANK if question["id"]==question_ids[0]),language)})
+        return self.send_json({"session_id":session_id,"index":0,"total":len(question_ids),"deadline_seconds":900,"question":public_interview_question(next(question for question in INTERVIEW_BANK if question["id"]==question_ids[0]),language,session_id)})
 
     def _post_interview_answer(self, path, body):
         # POST /api/interview/answer
@@ -1664,7 +1684,8 @@ class Handler(SimpleHTTPRequestHandler):
             if not question: return self.send_json({"error":"Mülakat sorusu bulunamadı."},500)
         checks=[]
         if question["kind"]=="choice":
-            correct=type(answer) is int and answer==question["answer"]
+            order=interview_option_order(session_id,question)
+            correct=type(answer) is int and 0<=answer<len(order) and order[answer]==question["answer"]
         else:
             if not isinstance(answer,str) or len(answer)>MAX_SOURCE: return self.send_json({"error":"Kod boş olmalı ve 20.000 karakteri aşmamalı."},400)
             correct=bool(answer.strip())
@@ -1685,7 +1706,7 @@ class Handler(SimpleHTTPRequestHandler):
             score=sum(1 for item in answers if item["correct"])
             complete=len(answers)>=len(question_ids)
             con.execute("UPDATE interview_sessions SET answers_json=?,score=?,completed=?,completed_at=CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE profile_id=? AND session_id=?",(json.dumps(answers),score,int(complete),int(complete),profile_id,session_id))
-        return self.send_json({"correct":bool(correct),"explanation":question.get("explanation",{}).get(language,""),"hint":("İpucu: çıktıyı ve her test girdisini ayrı ayrı izle." if language=="tr" else "Подсказка: проверь вывод для каждого тестового ввода отдельно." ) if question["kind"]=="code" and not correct else "","checks":checks,"score":score,"answered":len(answers),"total":len(question_ids),"complete":complete,"next_question":None if complete else public_interview_question(next(item for item in INTERVIEW_BANK if item["id"]==question_ids[len(answers)]),language)})
+        return self.send_json({"correct":bool(correct),"explanation":question.get("explanation",{}).get(language,""),"hint":("İpucu: çıktıyı ve her test girdisini ayrı ayrı izle." if language=="tr" else "Подсказка: проверь вывод для каждого тестового ввода отдельно." ) if question["kind"]=="code" and not correct else "","checks":checks,"score":score,"answered":len(answers),"total":len(question_ids),"complete":complete,"next_question":None if complete else public_interview_question(next(item for item in INTERVIEW_BANK if item["id"]==question_ids[len(answers)]),language,session_id)})
 
     def _post_workspace_build(self, path, body):
         # POST /api/workspace/build
@@ -1887,6 +1908,25 @@ class Handler(SimpleHTTPRequestHandler):
             con.execute("UPDATE profiles SET lang=? WHERE id=?", (lang, profile_id))
         return self.send_json({"ok": True})
 
+    def _post_hint(self, path, body):
+        # POST /api/hint  {profile_id, task_id, level, lang?}
+        profile_id, task_id, level = body.get("profile_id"), body.get("task_id"), body.get("level")
+        task = content_index.task(task_id) if isinstance(task_id, str) else None
+        if not task: return self.send_json({"error": "Görev bulunamadı. / Задание не найдено.", "code": "task_not_found"}, 404)
+        hints = task.get("hints") if isinstance(task.get("hints"), dict) else {}
+        with db(immediate=True) as con:
+            profile = valid_profile(con, profile_id)
+            if not profile: return self.send_json({"error": "Profil bulunamadı.", "code": "profile_not_found"}, 404)
+            language = body.get("lang") if body.get("lang") in ("tr", "ru") else profile["lang"]
+            items = hints.get(language) or hints.get("tr") or []
+            if type(level) is not int or not 0 <= level < len(items):
+                return self.send_json({"error": "İpucu yok. / Подсказки нет.", "code": "hint_not_found"}, 404)
+            revealed = {row[0] for row in con.execute("SELECT level FROM hint_reveals WHERE profile_id=? AND task_id=?", (profile_id, task_id))}
+            if level > 0 and level - 1 not in revealed:
+                return self.send_json({"error": "Önce önceki ipucunu aç. / Сначала открой предыдущую подсказку.", "code": "hint_order"}, 409)
+            con.execute("INSERT OR IGNORE INTO hint_reveals(profile_id,task_id,level) VALUES(?,?,?)", (profile_id, task_id, level))
+        return self.send_json({"ok": True, "level": level, "hint": items[level], "count": len(items), "penalty": 0.1})
+
     def _post_submit(self, path, body):
         # POST /api/submit
         task_id, answer = body.get("task_id"), body.get("answer", "")
@@ -1898,6 +1938,8 @@ class Handler(SimpleHTTPRequestHandler):
         with db() as con:
             profile = valid_profile(con, profile_id)
             if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
+            # The server remembers which hints it revealed; the client flag can only add a penalty.
+            hint_used = bool(body.get("hint_used")) or con.execute("SELECT 1 FROM hint_reveals WHERE profile_id=? AND task_id=? LIMIT 1", (profile_id, task_id)).fetchone() is not None
             prerequisites = chapter.get("prerequisites", [])
             if prerequisites:
                 required_bosses = [content_index.boss_of(prereq) for prereq in prerequisites]
@@ -1911,7 +1953,7 @@ class Handler(SimpleHTTPRequestHandler):
         if task["kind"] in ("code", "boss", "fix"):
             missing = [] if task.get("concept_rule") else [term for term in task.get("requires", []) if term.casefold() not in answer.casefold()]
             if missing:
-                record_learning_event(profile_id, task_id, False, "requirement", body.get("hint_used"))
+                record_learning_event(profile_id, task_id, False, "requirement", hint_used)
                 return self.send_json({"correct": False, "result": {"error": "Görev şartı eksik / Требование не выполнено", "missing": missing}})
             checks = []
             for idx, case in enumerate(task.get("tests", [{"input": task.get("input", ""), "expected": task["expected"]}]), 1):
@@ -1921,14 +1963,14 @@ class Handler(SimpleHTTPRequestHandler):
                 if not passed:
                     result["checks"] = checks
                     error_kind = "compile" if result.get("error") else "runtime" if result.get("exit_code") not in (None, 0) else "output"
-                    record_learning_event(profile_id, task_id, False, error_kind, body.get("hint_used"))
+                    record_learning_event(profile_id, task_id, False, error_kind, hint_used)
                     return self.send_json({"correct": False, "result": result})
             concept = None
             if task.get("concept_rule"):
                 language = profile["lang"]
                 concept = check_cpp_concept(answer, task["concept_rule"], language)
                 if not concept["passed"]:
-                    record_learning_event(profile_id, task_id, False, "concept", body.get("hint_used"))
+                    record_learning_event(profile_id, task_id, False, "concept", hint_used)
                     return self.send_json({"correct": False, "result": {"kind": "concept", "error": concept["message"], "criteria": concept["label"], "checks": checks + [{"name": concept["label"], "passed": False, "kind": "concept"}]}})
                 checks.append({"name": concept["label"], "passed": True, "kind": "concept"})
             correct = True
@@ -1938,7 +1980,7 @@ class Handler(SimpleHTTPRequestHandler):
             correct = normalize_answer(answer) == normalize_answer(answer_key)
             feedback = None
         if not correct:
-            record_learning_event(profile_id, task_id, False, "wrong_answer", body.get("hint_used"))
+            record_learning_event(profile_id, task_id, False, "wrong_answer", hint_used)
             if task["kind"] == "quiz":
                 with db() as con:
                     if valid_profile(con, profile_id):
@@ -1948,7 +1990,7 @@ class Handler(SimpleHTTPRequestHandler):
         daily_bonus = 0
         with DB_LOCK, db() as con:
             if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
-            reward = max(1, int(task["xp"] * (0.9 if body.get("hint_used") else 1)))
+            reward = max(1, int(task["xp"] * (0.9 if hint_used else 1)))
             inserted = con.execute("INSERT OR IGNORE INTO completions(profile_id,task_id,xp) VALUES(?,?,?)", (profile_id, task_id, reward)).rowcount
             if inserted:
                 con.execute("UPDATE profiles SET xp=xp+? WHERE id=?", (reward, profile_id))
@@ -1970,7 +2012,7 @@ class Handler(SimpleHTTPRequestHandler):
                 con.execute("UPDATE profiles SET xp=xp+? WHERE id=?", (daily_bonus, profile_id))
                 con.execute("UPDATE daily_quests SET completed=1 WHERE profile_id=? AND day=?", (profile_id, time.strftime("%Y-%m-%d")))
             sync_achievements(con, profile_id)
-        record_learning_event(profile_id, task_id, True, "", body.get("hint_used"))
+        record_learning_event(profile_id, task_id, True, "", hint_used)
         return self.send_json({"correct": True, "xp": reward if inserted else 0, "daily_bonus": daily_bonus, "already_done": not inserted, "tests": feedback.get("checks", []) if isinstance(feedback, dict) else [], "criteria": task.get("requires", [])})
 
     def _post_vscode(self, path, body):
@@ -2091,7 +2133,7 @@ class Handler(SimpleHTTPRequestHandler):
         if session["remaining_seconds"]<=0 and not session["completed"]:
             with db() as con: con.execute("UPDATE interview_sessions SET completed=1,completed_at=CURRENT_TIMESTAMP WHERE profile_id=? AND session_id=?",(profile_id,session_id))
             return self.send_json({"session_id":session_id,"index":index,"total":len(ids),"score":session["score"],"completed":True,"question":None,"remaining_seconds":0})
-        return self.send_json({"session_id":session_id,"index":index,"total":len(ids),"score":session["score"],"completed":bool(session["completed"]),"question":public_interview_question(q,session["lang"]) if q else None,"remaining_seconds":session["remaining_seconds"]})
+        return self.send_json({"session_id":session_id,"index":index,"total":len(ids),"score":session["score"],"completed":bool(session["completed"]),"question":public_interview_question(q,session["lang"],session_id) if q else None,"remaining_seconds":session["remaining_seconds"]})
 
     def _get_state(self, path):
         # GET /api/state
@@ -2342,6 +2384,7 @@ POST_ROUTES = {
     "/api/code-golf/compare": "_post_code_golf_compare",
     "/api/ai/diagnose": "_post_ai_diagnose",
     "/api/language": "_post_language",
+    "/api/hint": "_post_hint",
     "/api/submit": "_post_submit",
     "/api/vscode": "_post_vscode",
     "/api/vscode/read": "_post_vscode_read",

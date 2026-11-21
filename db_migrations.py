@@ -77,10 +77,16 @@ def _m3_backfill_learning_events(con, ctx):
     con.executemany("INSERT INTO learning_events(profile_id,task_id,chapter_id,correct,created_at) VALUES(?,?,?,1,?)", rows)
 
 
+def _m4_hint_reveals(con, ctx):
+    """Hints are revealed by the server so the reward penalty no longer depends on the client."""
+    con.execute("CREATE TABLE IF NOT EXISTS hint_reveals(profile_id TEXT NOT NULL, task_id TEXT NOT NULL, level INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,task_id,level), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE)")
+
+
 MIGRATIONS = (
     (1, "baseline schema", _m1_baseline),
     (2, "history indexes", _m2_indexes),
     (3, "learning event backfill", _m3_backfill_learning_events),
+    (4, "server-side hint reveals", _m4_hint_reveals),
 )
 LATEST_VERSION = MIGRATIONS[-1][0]
 
