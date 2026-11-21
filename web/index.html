@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="/onboarding.css"><link rel="stylesheet" href="/theme.css">
 </head>
 <body>
+<a class="skip-link" href="#main-content" data-i="skipToContent">İçeriğe geç</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="M5 20V10l7-6 7 6v10z"/><path d="M9.5 20v-5h5v5"/><path d="M4 7l2.5-3L9 6M20 7l-2.5-3L15 6" opacity=".0"/></symbol>
 <symbol id="i-map" viewBox="0 0 24 24"><circle cx="8" cy="9" r="1.6"/><circle cx="12" cy="6.5" r="1.6"/><circle cx="16" cy="9" r="1.6"/><path d="M12 11.5c-2.6 0-5 2.4-5 4.6 0 1.6 1.4 2.4 2.8 2.4 1 0 1.5-.5 2.2-.5s1.2.5 2.2.5c1.4 0 2.8-.8 2.8-2.4 0-2.2-2.4-4.6-5-4.6z"/></symbol>
@@ -81,7 +82,7 @@
     <div id="chapter-list" class="chapter-list"></div>
     <div class="side-bottom"><div class="streak"><span>🔥</span><span><b id="streak-count">0</b> <span data-i="streak">günlük seri</span></span></div><div class="local-note"><span class="online-dot"></span><span data-i="local">Tamamen yerel · İnternet gerekmez</span></div></div>
   </aside>
-  <main class="main">
+  <main class="main" id="main-content" tabindex="-1">
     <header class="topbar"><div class="breadcrumbs"><span>C++ Adventure</span><span class="crumb-sep">/</span><b id="crumb-current" data-i="home">Ana üs</b></div><div class="top-actions"><button id="lang-btn" class="lang-btn" data-i-aria="languageToggleLabel" aria-label="Dili değiştir">🇷🇺 Русский</button><button class="icon-button" id="settings-open" data-i-title="settingsTitle" title="AI / settings">⚙</button><button class="icon-button" id="sound-btn" data-i-title="soundTitle" title="Meow">♫</button><button class="top-avatar" id="top-profile" data-i-title="profilesTitle" aria-label="Profiles">🐱</button></div></header>
     <div id="toast" class="toast" role="status"></div>
     <section id="view-home" class="view"></section>

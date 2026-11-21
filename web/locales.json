@@ -265,7 +265,8 @@
     "labMemoryQueue": "Queue · FIFO",
     "labLinkedList": "Linked list",
     "labDynamic": "Dynamic allocation",
-    "languageToggleLabel": "Dili değiştir"
+    "languageToggleLabel": "Dili değiştir",
+    "skipToContent": "İçeriğe geç"
   },
   "ru": {
     "home": "База",
@@ -533,7 +534,8 @@
     "labMemoryQueue": "Очередь · FIFO",
     "labLinkedList": "Связный список",
     "labDynamic": "Динамическая память",
-    "languageToggleLabel": "Сменить язык"
+    "languageToggleLabel": "Сменить язык",
+    "skipToContent": "Перейти к содержимому"
   },
   "modules": {
     "admin": {
@@ -1356,7 +1358,7 @@
     },
     "pairs": {
       "advanced-cpp.001": {
-        "tr": "Модель готова.",
+        "tr": "Model hazır.",
         "ru": "Модель готова."
       },
       "advanced-cpp.002": {

@@ -395,3 +395,20 @@ list changed several times in 2026, so it was not added as a second provider.
   Full suite: **270 tests OK** (257 s).
 - Not verified: a real request to Groq (no key on this machine; the user creates a free key at
   console.groq.com/keys). Free-plan limits are set per account and can change; see the Groq console.
+
+## Phase 10 — Accessibility, Turkish/Russian, performance (2026-11-21)
+
+- Accessibility:
+  - Skip link ("İçeriğe geç" / "Перейти к содержимому") as the first element; `<main id="main-content" tabindex="-1">`.
+  - The active nav item gets `aria-current="page"`.
+  - New `App.trapFocus` in `core.js`: Tab and Shift+Tab wrap inside the dialog, Escape closes it, and focus returns to the opener. The save dialog uses it; the onboarding wizard got the same Tab trap. The PIN dialog already had one.
+  - Bug fixed: Escape inside a dialog also ran the app's global Escape handler and jumped to the profile screen.
+- Turkish/Russian:
+  - `pairs.advanced-cpp.001` had Russian text in the Turkish slot ("Модель готова." → "Model hazır.").
+  - Quiz grading folds `ё`→`е`.
+  - The class lab built a C++ variable from `name.lower()`, so "Işık Pati" produced invalid code. New `visual_labs.cpp_identifier` (Turkish→ASCII, keyword/digit safe) and `cpp_string` (escapes quotes).
+  - Server errors: new `error_catalog.py` gives each of the 44 Turkish-only messages an `error_code` and Russian text. Bilingual "TR / RU" messages are split. `send_json` adds `error_tr`/`error_ru`; `api()` in `app.js` shows the current language.
+- Performance (measured, no change): `/api/state` builds in ~11 ms and is 247 KB (55 KB gzipped), mostly the public curriculum. It is acceptable over loopback; caching the curriculum separately is a possible later step.
+- Tests: `tests/test_phase10_a11y_i18n.py` (8 tests). It includes a Node run of the real `trapFocus` and a guard that every new Turkish-only server error needs a catalog entry. `test_architecture` now also checks the split fields.
+- Full suite: 278 tests. 277 passed on the full run; the one exact-match test was then updated and passes.
+- Screen-reader testing with NVDA/JAWS was not done; the checks are structural and keyboard-level.

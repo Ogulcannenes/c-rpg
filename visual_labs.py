@@ -39,6 +39,26 @@ RU = {
 }
 
 
+
+_TURKISH_ASCII = str.maketrans({"ç": "c", "ş": "s", "ğ": "g", "ı": "i", "ö": "o", "ü": "u", "İ": "I", "Ç": "C", "Ş": "S", "Ğ": "G", "Ö": "O", "Ü": "U"})
+_CPP_KEYWORDS = {"auto", "bool", "break", "case", "char", "class", "const", "delete", "do", "double", "else", "enum", "false", "float", "for", "if", "int", "long", "new", "private", "public", "return", "short", "static", "struct", "switch", "this", "true", "void", "while"}
+
+
+def cpp_identifier(name, fallback="luna"):
+    """A learner-chosen name as a valid C++ variable name: "Işık Pati" -> "isik_pati"."""
+    import re
+    text = str(name).translate(_TURKISH_ASCII).lower()
+    text = re.sub(r"[^a-z0-9_]+", "_", text).strip("_")
+    if not text:
+        return fallback
+    if not re.match(r"[a-z_]", text):
+        text = fallback + "_" + text
+    return text + "_" if text in _CPP_KEYWORDS else text
+
+
+def cpp_string(text):
+    return str(text).replace("\\", "\\\\").replace('"', '\\"')
+
 def _integer(raw, key, default, minimum=-1000, maximum=1000):
     try: value = int(raw.get(key, default))
     except (TypeError, ValueError): value = default
@@ -373,7 +393,8 @@ def _annotate(lab_id, raw, language, result, frame_lines=None, operation=None):
     elif lab_id == "oop":
         name = str(raw.get("name", "Luna"))[:20] or "Luna"
         start = _integer(raw, "level", 1, 1, 99)
-        code = ["class Cat {", "public:", "    std::string name; int level;", "    void levelUp() { ++level; }", "};", f'Cat {name.lower() or "luna"}{{"{name}", {start}}};', f"{name.lower() or 'luna'}.levelUp();"]
+        var = cpp_identifier(name)
+        code = ["class Cat {", "public:", "    std::string name; int level;", "    void levelUp() { ++level; }", "};", f'Cat {var}{{"{cpp_string(name)}", {start}}};', f"{var}.levelUp();"]
         lines = [1, 6, 7]
         blueprint = _cell("Cat", "class", "blueprint", "", "class", fields=["name", "level"], methods=["levelUp()"])
         frames([[blueprint],

@@ -40,6 +40,7 @@ from devtools import initial_state as initial_devtool_state, apply as apply_devt
 from learning_engine import learning_insights
 from project_workshop import validate_files as validate_project_files, build_project as build_project_workspace, resolve_cmake
 import ai_tutor
+import error_catalog
 from career_system import CAREER_LEVELS, INTERVIEW_BANK, career_summary, select_interview_questions
 from rpg_system import SECRET_QUESTS, guild_summary, quest_by_id
 from advanced_cpp import assembly_outputs, simulate_counter
@@ -546,7 +547,7 @@ def state(profile_id):
 
 
 
-_ANSWER_TRANSLATION = str.maketrans({"ç": "c", "ş": "s", "ğ": "g", "ı": "i", "ö": "o", "ü": "u", "İ": "i", "Ç": "c", "Ş": "s", "Ğ": "g", "Ö": "o", "Ü": "u"})
+_ANSWER_TRANSLATION = str.maketrans({"ç": "c", "ş": "s", "ğ": "g", "ı": "i", "ö": "o", "ü": "u", "İ": "i", "Ç": "c", "Ş": "s", "Ğ": "g", "Ö": "o", "Ü": "u", "ё": "е", "Ё": "е"})
 
 
 def normalize_answer(value) -> str:
@@ -891,6 +892,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def send_json(self, obj, code=200):
+        obj = error_catalog.localize(obj)
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")

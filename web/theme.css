@@ -216,3 +216,9 @@ button.primary:hover:not(:disabled), .primary:hover:not(:disabled) { background:
 
 /* Phase 9: AI tutor actions under a diagnosis. */
 .diagnosis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* Phase 10: skip link, visible only when focused from the keyboard. */
+.skip-link { position: absolute; left: 12px; top: -60px; z-index: 10000; padding: 10px 16px; border-radius: 10px;
+  background: var(--ds-accent, #8b6cff); color: #fff; font-weight: 700; text-decoration: none; transition: top .15s; }
+.skip-link:focus { top: 12px; outline: 3px solid #fff; outline-offset: 2px; }
+#main-content:focus { outline: none; }

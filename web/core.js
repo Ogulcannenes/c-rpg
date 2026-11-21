@@ -57,7 +57,38 @@
 
   const ESCAPES = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'};
 
+  const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+  // Keep Tab inside a modal, close it on Escape and give focus back to the opener.
+  // Returns a release function; call it when the dialog closes by other means.
+  function trapFocus(container, { onEscape } = {}) {
+    const opener = document.activeElement;
+    const items = () => [...container.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null || el === document.activeElement);
+    function onKey(event) {
+      if (!container.isConnected) return release();
+      if (event.key === 'Escape' && onEscape) { event.preventDefault(); event.stopPropagation(); onEscape(); return; }
+      if (event.key !== 'Tab') return;
+      const list = items();
+      if (!list.length) { event.preventDefault(); return; }
+      const first = list[0], last = list[list.length - 1];
+      if (!container.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    let released = false;
+    function release() {
+      if (released) return;
+      released = true;
+      document.removeEventListener('keydown', onKey, true);
+      if (opener && opener.isConnected && typeof opener.focus === 'function') opener.focus();
+    }
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => { if (!released && !container.contains(document.activeElement)) items()[0]?.focus(); }, 30);
+    return release;
+  }
+
   window.App = Object.freeze({
+    trapFocus,
     before: (name, hook) => { listFor(beforeHooks, name).push(hook); },
     after: (name, hook) => { listFor(afterHooks, name).push(hook); },
     install,

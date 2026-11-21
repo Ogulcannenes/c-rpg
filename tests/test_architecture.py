@@ -157,7 +157,9 @@ class StaleContentTests(unittest.TestCase):
         self.assertIn(state["profile"]["daily_quest"]["task_id"], content_index.TASK_BY_ID)
 
     def test_unknown_api_paths_answer_in_json(self):
-        self.assertEqual(self.request("GET", "/api/does-not-exist"), (404, {"error": "Bilinmeyen uç nokta. / Неизвестный адрес API."}))
+        # Phase 10: the bilingual message is also split into error_tr / error_ru for the page.
+        self.assertEqual(self.request("GET", "/api/does-not-exist"), (404, {"error": "Bilinmeyen uç nokta. / Неизвестный адрес API.",
+                                                                           "error_tr": "Bilinmeyen uç nokta.", "error_ru": "Неизвестный адрес API."}))
 
 
 if __name__ == "__main__":

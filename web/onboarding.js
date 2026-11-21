@@ -35,8 +35,8 @@
     const index = Math.max(0, CHARS.findIndex(c => c.id === existing?.avatar));
     wiz = {existing, step: 0, index, name: existing?.name || '', pin: '', currentPin: '', removePin: false, error: ''};
     paintWizard(true);
-    document.removeEventListener('keydown', keys);
-    document.addEventListener('keydown', keys);
+    document.removeEventListener('keydown', keys, true);
+    document.addEventListener('keydown', keys, true);
     setTimeout(() => $(`#onboard-overlay .ob-card[data-idx="${wiz.index}"]`)?.focus(), 80);
   }
 
@@ -45,7 +45,7 @@
     if (!host) { host = document.createElement('div'); host.id = 'onboard-overlay'; document.body.append(host); }
     return host;
   }
-  function closeWizard() { $('#onboard-overlay')?.remove(); wiz = null; document.body.classList.remove('onboard-open'); document.removeEventListener('keydown', keys); }
+  function closeWizard() { $('#onboard-overlay')?.remove(); wiz = null; document.body.classList.remove('onboard-open'); document.removeEventListener('keydown', keys, true); }
 
   function paintWizard(fresh = false) {
     const host = overlay(), c = CHARS[wiz.index], first = !profiles.length && !wiz.existing;
@@ -169,7 +169,18 @@
   }
   function keys(event) {
     if (!wiz) return;
-    if (event.key === 'Escape' && profiles.length) { closeWizard(); return; }
+    if (event.key === 'Escape') { event.stopPropagation(); if (profiles.length) closeWizard(); return; }
+    if (event.key === 'Tab') {
+      const host = $('#onboard-overlay');
+      const list = host ? [...host.querySelectorAll('button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])')] : [];
+      if (list.length) {
+        const first = list[0], last = list[list.length - 1];
+        if (!host.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+        else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+      return;
+    }
     if (wiz.step === 0 && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) { event.preventDefault(); choose(wiz.index + (event.key === 'ArrowRight' ? 1 : -1)); }
     if (event.key === 'Enter' && !event.target.closest?.('button')) { event.preventDefault(); next(); }
   }
