@@ -1,4 +1,4 @@
-﻿# C++ Adventure — Development Log
+# C++ Adventure — Development Log
 
 Modernization work on branch `modernization`. Each phase lists what changed, why,
 which tests ran, and what is still open. Test results are copied from real runs only.
