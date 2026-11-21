@@ -441,3 +441,14 @@ list changed several times in 2026, so it was not added as a second provider.
   - Code signing: no certificate, so files are unsigned and SmartScreen may warn.
   - The project's `dist\` was not rebuilt.
 - Tests: `tests/test_phase11_desktop.py` (17 tests). Full suite: **293 tests OK** (256 s).
+
+## Phase 12 — Regression, docs, report (2026-11-21)
+
+- Full regression after Phase 11, three consecutive runs: **293 OK / 293 OK / 293 OK** (256 s, 259 s, 253 s).
+- `docs/FINAL_REPORT.md`: Turkish final report (summary table, per-phase results, verified and
+  not-verified lists, next steps for the user, rollback). It is linked from the README.
+  Screenshots are in `docs/screenshots/` (before/after).
+- Still open: quest/boss screen redesign; locked-achievement contrast; shop rebalance; C++23 topics;
+  multi-file missions; splitting `server.py` into services. Also not done yet: compiling and
+  testing the Inno installer (needs ISCC), code signing (needs a certificate), a real Groq request
+  (needs the user's free key) and a screen-reader pass.

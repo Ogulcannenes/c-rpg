@@ -2,6 +2,8 @@
 
 Windows 11 için çevrimdışı kullanılabilen, Türkçe/Rusça C++ öğrenme macerası. Masaüstü sürümü WebView2 penceresinde açılır; tarayıcı sekmesi gerekmez. G++ derleyicisi gerçek C++ kodunu çalıştırır.
 
+Modernizasyon sonuç raporu (0.5.0, ekran görüntüleriyle): [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md)
+
 ## Hızlı başlatma
 
 Kaynak koddan çalıştırmak için `start-desktop.bat` dosyasını açın. Varsa `dist\CppAdventure\CppAdventure.exe` derlemesini, yoksa proje içindeki `.venv` ile `desktop.py`'yi başlatır. Eski `dist-stage…` klasörlerine artık bakılmaz; bu klasörler silinmedi, isterseniz elle kaldırabilirsiniz.
