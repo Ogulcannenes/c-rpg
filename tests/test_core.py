@@ -905,11 +905,11 @@ class CoreSystemTests(unittest.TestCase):
         session = "8d04995a-37cc-46a8-9c7d-450dc47d74b9"
         pulse = {"profile_id": aid, "session_id": session, "day": "2026-11-14", "seconds": 30}
         self.assertEqual(self.request("POST", "/api/study/pulse", pulse)[0], 200)
-        self.request("POST", "/api/study/pulse", {**pulse, "seconds": 90})
+        self.request("POST", "/api/study/pulse", {**pulse, "seconds": 70})  # within the pulse slack
         self.request("POST", "/api/study/pulse", pulse)  # stale retries must not add time
         stats_a = self.request("GET", f"/api/stats?profile_id={aid}")[1]
         stats_b = self.request("GET", f"/api/stats?profile_id={bid}")[1]
-        self.assertEqual(stats_a["study_seconds_30d"], 90)
+        self.assertEqual(stats_a["study_seconds_30d"], 70)
         self.assertEqual(stats_b["study_seconds_30d"], 0)
         self.assertEqual(stats_a["study_days_30d"], 1)
 
@@ -918,6 +918,17 @@ class CoreSystemTests(unittest.TestCase):
         pid = created["profile_id"]
         invalid = self.request("POST", "/api/study/pulse", {"profile_id": pid, "session_id": "bad", "day": "2026-11-14", "seconds": 50_000})
         self.assertEqual(invalid[0], 400)
+
+    def test_study_time_cannot_grow_faster_than_the_clock(self):
+        _, created = self.request("POST", "/api/profiles", {"name": "Study Clock"})
+        pid = created["profile_id"]
+        pulse = {"profile_id": pid, "session_id": "5b0e3f4c-9d55-4f8e-8b36-1f7f4c2a9e01", "day": "2026-11-14"}
+        self.request("POST", "/api/study/pulse", {**pulse, "seconds": 40_000})  # first pulse is capped
+        first = self.request("GET", f"/api/stats?profile_id={pid}")[1]["study_seconds_30d"]
+        self.assertEqual(first, server.STUDY_FIRST_PULSE_MAX_SECONDS)
+        self.request("POST", "/api/study/pulse", {**pulse, "seconds": 40_000})  # an instant 11-hour jump
+        second = self.request("GET", f"/api/stats?profile_id={pid}")[1]["study_seconds_30d"]
+        self.assertLessEqual(second, first + server.STUDY_PULSE_SLACK_SECONDS + 2)
 
     def test_study_time_survives_profile_export_and_import(self):
         _, created = self.request("POST", "/api/profiles", {"name": "Study Backup"})

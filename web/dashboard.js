@@ -54,7 +54,8 @@
       </div>
       <small class="dash-muted">${esc(`${number(have)} / ${number(need)} XP · ${c.toNextLevel}`)}</small>
       <dl class="dash-stats">
-        <div><dt>${esc(c.totalXp)}</dt><dd>${number(p.xp)}</dd></div>
+        <div><dt>${esc(c.totalXp)}</dt><dd>${number(p.lifetime_xp ?? p.xp)}</dd></div>
+        <div><dt>${esc(c.balance)}</dt><dd>${number(p.balance ?? p.xp)}</dd></div>
         <div><dt>${esc(c.streak)}</dt><dd><span aria-hidden="true">🔥</span> ${esc(plural(streak, c.days))}</dd></div>
       </dl>
     </section>`;

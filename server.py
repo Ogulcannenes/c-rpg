@@ -245,6 +245,47 @@ def all_tasks():
     return content_index.TASKS
 
 
+# What the browser may see of a task. Answers, expected outputs, hidden tests and concept rules
+# stay on the server; code tasks expose one worked example and how many tests will be run.
+PUBLIC_TASK_FIELDS = ("id", "kind", "xp", "title", "prompt", "starter", "hints", "requires", "input", "bug_type")
+EXAMPLE_TASK_KINDS = {"code", "fix", "boss"}
+
+
+def public_task(task):
+    view = {key: task[key] for key in PUBLIC_TASK_FIELDS if key in task}
+    tests = task.get("tests") or []
+    if task.get("kind") in EXAMPLE_TASK_KINDS and tests:
+        example = next((case for case in tests if str(case.get("expected", "")).strip()), tests[0])
+        view["tests"] = [{"input": example.get("input", ""), "expected": example.get("expected", "")}]
+        view["test_count"] = len(tests)
+    return view
+
+
+def public_curriculum(chapters):
+    return [{**{key: value for key, value in chapter.items() if key != "tasks"},
+             "tasks": [public_task(task) for task in chapter["tasks"]]} for chapter in chapters]
+
+
+PUBLIC_CURRICULUM = public_curriculum(CURRICULUM)
+
+# Arena timing is server-authoritative: GET /api/arena records when this server first showed the
+# challenge to a profile; a submission can never claim to be faster than what the server observed.
+ARENA_OPENED = {}
+ARENA_OPENED_LOCK = threading.Lock()
+# Study time may grow at most as fast as wall-clock time between pulses (plus scheduling slack).
+STUDY_PULSE_SLACK_SECONDS = 45
+STUDY_FIRST_PULSE_MAX_SECONDS = 120
+
+
+def arena_opened(profile_id, day, challenge_id, mark=False):
+    key = (str(profile_id), day, challenge_id)
+    with ARENA_OPENED_LOCK:
+        if mark:
+            for stale in [k for k in ARENA_OPENED if k[1] != day]:
+                del ARENA_OPENED[stale]
+            ARENA_OPENED.setdefault(key, time.monotonic())
+        return ARENA_OPENED.get(key)
+
 TASK_XP = {task["id"]: int(task["xp"]) for chapter in CURRICULUM for task in chapter["tasks"]}
 TASK_CHAPTER = {task["id"]: chapter["id"] for chapter in CURRICULUM for task in chapter["tasks"]}
 LAB_XP = {lab["id"]: int(lab.get("xp", 0)) for lab in LABS}
@@ -463,6 +504,10 @@ def state(profile_id):
     tasks = all_tasks()
     with db() as con:
         earned = max(0, base_level_xp(con, profile_id) + admin_level_bonus(con, profile_id))
+    # Two separate numbers: lifetime XP (drives the level, never goes down) and the spendable
+    # balance in profiles.xp (the shop deducts from it). Spending never costs a level.
+    profile["lifetime_xp"] = earned
+    profile["balance"] = int(profile.get("xp") or 0)
     lvl = 1
     while earned >= lvl * 120:
         earned -= lvl * 120
@@ -510,7 +555,7 @@ def state(profile_id):
                 weak.append({"chapter": task_to_chapter[row["task_id"]], "wrong_rate": round(wrong_rate,2)})
         profile["weak_topics"] = weak
     profile["total_tasks"] = len(tasks)
-    return {"profile": profile, "curriculum": CURRICULUM}
+    return {"profile": profile, "curriculum": PUBLIC_CURRICULUM}
 
 
 
@@ -1022,8 +1067,11 @@ class Handler(SimpleHTTPRequestHandler):
                 cases.extend({"name": f"Test {later}", "passed": False, "phase": "compile", "error": ""} for later in range(index + 1, len(challenge["tests"]) + 1))
                 break
         compile_elapsed = max(1, int((time.monotonic() - started) * 1000))
-        try: elapsed = max(1, min(3_600_000, int(body.get("solve_ms", compile_elapsed))))
-        except (TypeError, ValueError): elapsed = compile_elapsed
+        opened = arena_opened(profile_id, challenge["day"], challenge["id"])
+        observed = int((time.monotonic() - opened) * 1000) if opened else compile_elapsed
+        try: claimed = int(body.get("solve_ms", observed))
+        except (TypeError, ValueError): claimed = observed
+        elapsed = max(1, min(3_600_000, max(observed, compile_elapsed, claimed)))
         passed = sum(item["passed"] for item in cases)
         total = len(challenge["tests"])
         score = round(passed * 100 / total)
@@ -1741,8 +1789,11 @@ class Handler(SimpleHTTPRequestHandler):
         day, seconds = str(body.get("day", "")), body.get("seconds")
         if not re.fullmatch(r"[0-9a-fA-F-]{16,64}", session_id) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) or type(seconds) is not int or seconds < 0 or seconds > 43_200:
             return self.send_json({"error": "Oturum süresi geçersiz."}, 400)
-        with db() as con:
+        with db(immediate=True) as con:
             if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
+            previous = con.execute("SELECT seconds,CAST(strftime('%s','now') AS INTEGER)-CAST(strftime('%s',updated_at) AS INTEGER) FROM study_sessions WHERE profile_id=? AND session_id=?", (profile_id, session_id)).fetchone()
+            ceiling = previous[0] + max(0, previous[1] or 0) + STUDY_PULSE_SLACK_SECONDS if previous else STUDY_FIRST_PULSE_MAX_SECONDS
+            seconds = min(seconds, ceiling)
             con.execute("INSERT INTO study_sessions(profile_id,session_id,day,seconds) VALUES(?,?,?,?) ON CONFLICT(profile_id,session_id) DO UPDATE SET day=excluded.day,seconds=MAX(study_sessions.seconds,excluded.seconds),updated_at=CURRENT_TIMESTAMP", (profile_id, session_id, day, seconds))
         return self.send_json({"ok": True})
 
@@ -2101,6 +2152,7 @@ class Handler(SimpleHTTPRequestHandler):
             profile = valid_profile(con, profile_id)
             if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
             challenge = daily_challenge()
+            arena_opened(profile_id, challenge["day"], challenge["id"], mark=True)
             current = con.execute("SELECT attempts,best_score,best_elapsed_ms,awarded_xp FROM arena_attempts WHERE profile_id=? AND day=? AND challenge_id=?", (profile_id,challenge["day"],challenge["id"])).fetchone()
             personal = con.execute("SELECT COALESCE(MAX(best_score),0) AS best_score,MIN(CASE WHEN best_score=100 AND best_elapsed_ms>0 THEN best_elapsed_ms END) AS best_elapsed_ms FROM arena_attempts WHERE profile_id=? AND challenge_id=?", (profile_id,challenge["id"])).fetchone()
         lang = profile["lang"]

@@ -2311,7 +2311,7 @@
         "level": "Seviye",
         "levelProgress": "Sonraki seviyeye ilerleme",
         "toNextLevel": "sonraki seviyeye",
-        "totalXp": "Toplam XP",
+        "totalXp": "Kazanılan XP",
         "streak": "Seri",
         "days": {
           "one": "{n} gün",
@@ -2347,7 +2347,8 @@
         "statusDone": "Tamamlandı",
         "statusOpen": "Açık",
         "statusLocked": "Kilitli",
-        "lockedHint": "Önce şu bölümleri tamamla"
+        "lockedHint": "Önce şu bölümleri tamamla",
+        "balance": "Harcanabilir XP"
       },
       "ru": {
         "eyebrow": "База",
@@ -2363,7 +2364,7 @@
         "level": "Уровень",
         "levelProgress": "Прогресс до следующего уровня",
         "toNextLevel": "до следующего уровня",
-        "totalXp": "Всего XP",
+        "totalXp": "Заработано XP",
         "streak": "Серия",
         "days": {
           "one": "{n} день",
@@ -2399,7 +2400,8 @@
         "statusDone": "Пройдено",
         "statusOpen": "Открыто",
         "statusLocked": "Закрыто",
-        "lockedHint": "Сначала пройди эти главы"
+        "lockedHint": "Сначала пройди эти главы",
+        "balance": "XP для покупок"
       }
     },
     "skillTree": {
