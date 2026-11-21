@@ -513,3 +513,10 @@ Full report with scores, measurements and before/after screenshots: `docs/UX_AUD
 - Verified in the browser: profile picker → pick profile → sidebar visible (260px), title "Ana üs". Not verified in an installed WebView2 build (no rebuild done).
 - 3 regression tests added. Suite: **305 OK**.
 - README (RU/EN/TR): "download from GitHub and install" section.
+
+## kur.bat: requirement check and installer for any computer (2026-11-21)
+
+- New `kur.bat` -> `installer/check-and-install.ps1` (UTF-8 BOM for PowerShell 5.1). It checks Windows 64-bit, Python 3.10+ (skips the Microsoft Store stub), G++ (same search as the app: `CPP_ADVENTURE_COMPILER`, PATH, `C:\msys64`), WebView2 (same registry keys as `desktop.py`) and `.venv`.
+- Missing items are installed with winget only after a yes/no question (`-Yes` skips the questions): Python 3.12 (user scope), WebView2, MSYS2 + `mingw-w64-ucrt-x86_64-gcc` through pacman, then the pinned dependencies into `.venv`. Without winget it prints the manual download links. `-CheckOnly` reports and installs nothing.
+- Verified: `-CheckOnly` on this machine (all OK, exit 0) and with a stripped PATH in an empty folder (Python and .venv reported missing, exit 1). The real winget/pacman installs were not run here, because everything is already installed.
+- README (RU/EN/TR): step 2 of "download from GitHub" is now `kur.bat`. 2 tests added; `test_phase11_desktop` 20 OK.

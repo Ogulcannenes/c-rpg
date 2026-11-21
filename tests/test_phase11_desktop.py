@@ -213,6 +213,31 @@ class RememberedStateTests(unittest.TestCase):
             self.assertTrue(path.is_dir())
 
 
+class RequirementCheckerTests(unittest.TestCase):
+    """kur.bat: checks Python, G++, WebView2 and .venv on any computer and installs what is missing."""
+
+    def test_script_is_wired_and_saved_for_windows_powershell(self):
+        raw = (ROOT / "installer" / "check-and-install.ps1").read_bytes()
+        self.assertTrue(raw.startswith(bytes([0xEF, 0xBB, 0xBF])), "PowerShell 5.1 needs a BOM for Turkish/Russian text")
+        bat = (ROOT / "kur.bat").read_text(encoding="ascii")
+        self.assertIn(r"installer\check-and-install.ps1", bat)
+        script = raw.decode("utf-8-sig")
+        for needle in ("Python.Python.3.12", "MSYS2.MSYS2", "Microsoft.EdgeWebView2Runtime", "mingw-w64-ucrt-x86_64-gcc",
+                       "requirements-desktop.lock.txt", desktop.WEBVIEW2_CLIENT.split("\\")[-1]):
+            self.assertIn(needle, script)
+        self.assertIn("function Ask", script)  # every install asks first unless -Yes
+
+    @unittest.skipUnless(os.name == "nt", "Windows only")
+    def test_check_only_reports_without_installing(self):
+        result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                                 str(ROOT / "installer" / "check-and-install.ps1"), "-CheckOnly"],
+                                capture_output=True, timeout=120)
+        out = result.stdout.decode("utf-8", "replace")
+        self.assertIn(result.returncode, (0, 1), out)
+        self.assertIn("Windows 64 bit", out)
+        self.assertGreaterEqual(out.count("[OK]") + out.count("[EKS"), 5, out)
+
+
 class LegacyPointerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

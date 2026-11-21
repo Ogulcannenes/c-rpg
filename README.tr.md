@@ -76,10 +76,13 @@ C++ öğrenmek için kedili bir macera oyunu. Dersler, görevler ve geri bildiri
 1. **Projeyi indir** — iki yoldan biri:
    - https://github.com/Ogulcannenes/c-rpg adresini aç → yeşil **Code** düğmesi → **Download ZIP**. Arşivi örneğin `C:\Games\c-rpg` klasörüne çıkar.
    - Ya da Git ile: `git clone https://github.com/Ogulcannenes/c-rpg.git`
-2. **Python 3.10+ kur:** https://www.python.org/downloads/ — kurulumda **Add python.exe to PATH** kutusunu işaretle.
-3. **G++ derleyicisini kur** — aşağıdaki 1. adım (MSYS2).
-4. Proje klasöründe **`setup-desktop.bat`** dosyasına çift tıkla (bir kez, internet gerekir), sonra **`start-desktop.bat`** — uygulama kendi penceresinde açılır.
-5. Kısayollu gerçek bir kurulum dosyası istersen **`build-windows.bat`** çalıştır; dosya `dist\` klasörüne çıkar (bkz. [Kaynak koddan paket oluşturma](#kaynak-koddan-paket-oluşturma)).
+2. **En kolayı:** proje klasöründeki **`kur.bat`** dosyasına çift tıkla. Python 3.10+, G++ derleyicisi, WebView2 ve uygulama bağımlılıklarının olup olmadığını denetler; eksikleri sorarak winget ile kurar (Python, MSYS2 + G++, WebView2, `.venv`) ve sonunda uygulamayı açmayı önerir. `kur.bat -CheckOnly` yalnızca denetler, hiçbir şey kurmaz.
+
+   Aşağıdaki 3–5. adımlar aynı işin elle yapılışıdır.
+3. **Python 3.10+ kur:** https://www.python.org/downloads/ — kurulumda **Add python.exe to PATH** kutusunu işaretle.
+4. **G++ derleyicisini kur** — aşağıdaki 1. adım (MSYS2).
+5. Proje klasöründe **`setup-desktop.bat`** dosyasına çift tıkla (bir kez, internet gerekir), sonra **`start-desktop.bat`** — uygulama kendi penceresinde açılır.
+6. Kısayollu gerçek bir kurulum dosyası istersen **`build-windows.bat`** çalıştır; dosya `dist\` klasörüne çıkar (bkz. [Kaynak koddan paket oluşturma](#kaynak-koddan-paket-oluşturma)).
 
 Windows internetten gelen .bat dosyaları için uyarırsa: **Ek bilgi → Yine de çalıştır**; ya da çıkarmadan önce ZIP'e sağ tık → Özellikler → **Engellemeyi kaldır**.
 

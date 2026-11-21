@@ -60,10 +60,13 @@
 1. **Скачай проект** — один из способов:
    - Открой https://github.com/Ogulcannenes/c-rpg → зелёная кнопка **Code** → **Download ZIP**. Распакуй архив, например в `C:\Games\c-rpg`.
    - Или с Git: `git clone https://github.com/Ogulcannenes/c-rpg.git`
-2. **Установи Python 3.10+** с https://www.python.org/downloads/ — в установщике отметь **Add python.exe to PATH**.
-3. **Установи компилятор G++** — см. шаг 1 ниже (MSYS2).
-4. В папке проекта дважды щёлкни **`setup-desktop.bat`** (один раз, нужен интернет), затем **`start-desktop.bat`** — приложение откроется в окне.
-5. Хочешь настоящий установщик с ярлыками? Запусти **`build-windows.bat`** — файл установки появится в `dist\` (подробнее в [Сборка из исходников](#сборка-из-исходников)).
+2. **Проще всего:** дважды щёлкни **`kur.bat`** в папке проекта. Он проверит Python 3.10+, компилятор G++, WebView2 и зависимости приложения, спросит и установит недостающее через winget (Python, MSYS2 + G++, WebView2, `.venv`), а затем предложит открыть приложение. `kur.bat -CheckOnly` — только проверка, без установки.
+
+   Шаги 3–5 ниже — то же самое вручную.
+3. **Установи Python 3.10+** с https://www.python.org/downloads/ — в установщике отметь **Add python.exe to PATH**.
+4. **Установи компилятор G++** — см. шаг 1 ниже (MSYS2).
+5. В папке проекта дважды щёлкни **`setup-desktop.bat`** (один раз, нужен интернет), затем **`start-desktop.bat`** — приложение откроется в окне.
+6. Хочешь настоящий установщик с ярлыками? Запусти **`build-windows.bat`** — файл установки появится в `dist\` (подробнее в [Сборка из исходников](#сборка-из-исходников)).
 
 Если Windows предупреждает о файлах .bat из интернета: **Подробнее → Выполнить в любом случае**, или правый щелчок по ZIP → Свойства → **Разблокировать** перед распаковкой.
 
@@ -276,10 +279,13 @@ A cat-themed adventure game for learning C++. Lessons, tasks and feedback are in
 1. **Download the project** — either:
    - Open https://github.com/Ogulcannenes/c-rpg → green **Code** button → **Download ZIP**, and extract it, e.g. to `C:\Games\c-rpg`.
    - Or with Git: `git clone https://github.com/Ogulcannenes/c-rpg.git`
-2. **Install Python 3.10+** from https://www.python.org/downloads/ — tick **Add python.exe to PATH** in the installer.
-3. **Install the G++ compiler** — see step 1 below (MSYS2).
-4. In the project folder double-click **`setup-desktop.bat`** (once, needs internet), then **`start-desktop.bat`** — the app opens in its window.
-5. Want a real installer with shortcuts? Run **`build-windows.bat`**; the setup file appears in `dist\` (see [Building from source](#building-from-source)).
+2. **Easiest:** double-click **`kur.bat`** in the project folder. It checks Python 3.10+, the G++ compiler, WebView2 and the app dependencies, asks and installs what is missing with winget (Python, MSYS2 + G++, WebView2, `.venv`), then offers to open the app. `kur.bat -CheckOnly` only checks and installs nothing.
+
+   Steps 3–5 below do the same by hand.
+3. **Install Python 3.10+** from https://www.python.org/downloads/ — tick **Add python.exe to PATH** in the installer.
+4. **Install the G++ compiler** — see step 1 below (MSYS2).
+5. In the project folder double-click **`setup-desktop.bat`** (once, needs internet), then **`start-desktop.bat`** — the app opens in its window.
+6. Want a real installer with shortcuts? Run **`build-windows.bat`**; the setup file appears in `dist\` (see [Building from source](#building-from-source)).
 
 If Windows warns about .bat files from the internet: **More info → Run anyway**, or right-click the ZIP → Properties → **Unblock** before extracting.
 
