@@ -152,6 +152,48 @@ pre-existing missing `favicon.ico`.
 `web/app.js`; tests `test_sandbox_windows.py`, `test_phase2_security.py` (new),
 `test_phase1_regressions.py`, `test_claude_ai.py` (expects DPAPI instead of plaintext).
 
-**Results:** full suite three consecutive runs: 212 OK / 213 OK / 213 OK (~206–223 s; the
+**Results (Phase 2):** full suite three consecutive runs: 212 OK / 213 OK / 213 OK (~206–223 s; the
 213th test is the `data-idx` regression added during run 1). Suite time dropped from ~228 s
 despite more tests, thanks to the compile cache.
+
+## Phase 3 — Database migrations and data integrity (2026-11-21)
+
+- New `db_migrations.py`: schema version in `PRAGMA user_version`; each migration plus its
+  version bump runs in one `BEGIN IMMEDIATE` transaction, so an interrupted upgrade rolls back
+  and is retried on the next start. Migrations shipped:
+  1. baseline schema (the 22 existing tables; safe on old databases: `IF NOT EXISTS` + column adds
+     + old single-item appearance → slot model),
+  2. indexes on `learning_events(profile_id, task_id, correct)`, `learning_events(profile_id, created_at)`,
+     `review_schedule(profile_id, due_at)`, `study_sessions(profile_id, day)`,
+  3. one-time learning-event backfill — this used to run on **every** startup (O(completions × curriculum)).
+- Before upgrading a database that already has profiles, a verified copy is written to
+  `<data>/backups/adventure-before-schema-vN-from-vM-<timestamp>.db` (SQLite online backup +
+  `integrity_check`). Backups are never deleted by the app.
+- A database written by a **newer** app version is refused (startup stops) instead of being
+  modified — protects data when someone runs an older build.
+- `PRAGMA journal_mode=WAL` is set once by the migration runner (persistent) instead of on every
+  connection.
+- Save format **v2**: export now includes `ai_usage`; import accepts v1 and v2 (v1 simply has no
+  `ai_usage`) and rejects unknown versions. `admin_bonus` (test-panel level XP) is intentionally
+  neither exported nor imported.
+- `POST /api/backup/database`: verified copy of the whole database (all profiles) in `<data>/backups`.
+
+**Verified on real data:** a temporary copy of the installed app's database (from the Phase 0
+backup: schema v0, 7 profiles, 106 completions) upgraded to v3 with identical row counts in every
+table, `integrity_check = ok`, and the pre-upgrade backup created. The live database was not touched
+(it will be upgraded, with its own automatic backup, the next time the app starts).
+
+**Tests:** `tests/test_db_migrations.py` (8): fresh DB; pre-versioning DB with realistic progress
+(profiles, Cyrillic names, completions, quiz history, owned + equipped item); idempotent second run
+(no duplicate backfill, no second backup); interrupted migration (rollback, version unchanged,
+retry succeeds); newer-version DB left byte-identical; read-only copy of the local dev database;
+save v2 round trip incl. `ai_usage` and v1 compatibility; whole-database backup.
+
+### Restoring a backup (manual)
+
+1. Close C++ Adventure.
+2. Copy the chosen file from `%LOCALAPPDATA%\CppAdventure\backups\` (or from
+   `C:\Users\user\CppAdventure-backups\phase0-2026-11-21\localappdata-CppAdventure\data\`) to
+   `%LOCALAPPDATA%\CppAdventure\data\adventure.db`, after moving the current file aside.
+3. Delete `adventure.db-wal` / `adventure.db-shm` next to it only if they belong to the file you replaced.
+4. Start the app; any needed migration runs automatically (with its own backup first).

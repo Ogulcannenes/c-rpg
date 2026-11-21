@@ -28,6 +28,7 @@ from urllib.parse import parse_qs, urlparse
 
 from curriculum import CURRICULUM
 from secret_store import delete_secret, read_secret, write_secret
+from db_migrations import backup_database, migrate as migrate_database
 from sandbox import SandboxBusy, assembly_policy_violation, build_slot, isolation_status, normalize_output, run_limited, run_tool, source_policy_violation
 from concept_checker import check_cpp_concept
 from visual_labs import LABS, simulate as simulate_visual_lab, public_result as public_lab_result
@@ -161,7 +162,7 @@ def db(immediate=False):
     """
     con = sqlite3.connect(DB_PATH, timeout=10)
     con.row_factory = sqlite3.Row
-    con.execute("PRAGMA journal_mode=WAL")
+    # journal_mode=WAL is persistent and set once by the migration runner.
     con.execute("PRAGMA synchronous=FULL")
     con.execute("PRAGMA foreign_keys=ON")
     if immediate:
@@ -233,47 +234,9 @@ def init_db():
             (DATA_ROOT / "legacy_db_path.txt").unlink(missing_ok=True)
         except OSError:
             pass
-    with db() as con:
-        con.executescript("""
-        CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY, name TEXT NOT NULL, avatar TEXT NOT NULL DEFAULT '🐱', pin_hash TEXT NOT NULL DEFAULT '', xp INTEGER NOT NULL DEFAULT 0, lang TEXT NOT NULL DEFAULT 'tr', streak INTEGER NOT NULL DEFAULT 0, last_day TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, active_item TEXT NOT NULL DEFAULT '', ai_provider TEXT NOT NULL DEFAULT 'offline');
-        CREATE TABLE IF NOT EXISTS completions(profile_id TEXT NOT NULL, task_id TEXT NOT NULL, completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, xp INTEGER NOT NULL, PRIMARY KEY(profile_id, task_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS achievements(profile_id TEXT NOT NULL, id TEXT NOT NULL, unlocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id, id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS quiz_results(profile_id TEXT NOT NULL, task_id TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, last_answer TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,task_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS review_schedule(profile_id TEXT NOT NULL, task_id TEXT NOT NULL, due_at TEXT NOT NULL, interval_days INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(profile_id,task_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS daily_quests(profile_id TEXT NOT NULL, day TEXT NOT NULL, task_id TEXT NOT NULL, reward INTEGER NOT NULL DEFAULT 15, completed INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(profile_id,day), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS shop_items(profile_id TEXT NOT NULL, item_id TEXT NOT NULL, bought_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,item_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS companion_equipment(profile_id TEXT NOT NULL, slot TEXT NOT NULL, item_id TEXT NOT NULL, equipped_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,slot), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS companion_loadouts(profile_id TEXT NOT NULL, loadout_id TEXT NOT NULL, name TEXT NOT NULL, equipment_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,loadout_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS project_submissions(profile_id TEXT NOT NULL, project_id TEXT NOT NULL, code TEXT NOT NULL DEFAULT '', score INTEGER NOT NULL DEFAULT 0, completed INTEGER NOT NULL DEFAULT 0, awarded INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,project_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS project_workspaces(profile_id TEXT NOT NULL, workspace_id TEXT NOT NULL, name TEXT NOT NULL, files_json TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,workspace_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS interview_sessions(profile_id TEXT NOT NULL, session_id TEXT NOT NULL, lang TEXT NOT NULL, questions_json TEXT NOT NULL, answers_json TEXT NOT NULL DEFAULT '[]', score INTEGER NOT NULL DEFAULT 0, completed INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT NOT NULL DEFAULT '', PRIMARY KEY(profile_id,session_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS portfolio_notes(profile_id TEXT NOT NULL, project_id TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', technologies TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,project_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS ai_usage(profile_id TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 0, estimated_usd REAL NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,provider,model), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS learning_events(id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id TEXT NOT NULL, task_id TEXT NOT NULL, chapter_id TEXT NOT NULL, correct INTEGER NOT NULL DEFAULT 0, error_kind TEXT NOT NULL DEFAULT '', hint_used INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS lab_awards(profile_id TEXT NOT NULL, lab_id TEXT NOT NULL, xp INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,lab_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS devtools_state(profile_id TEXT NOT NULL, module TEXT NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,module), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS study_sessions(profile_id TEXT NOT NULL, session_id TEXT NOT NULL, day TEXT NOT NULL, seconds INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,session_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS arena_attempts(profile_id TEXT NOT NULL, day TEXT NOT NULL, challenge_id TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, best_score INTEGER NOT NULL DEFAULT 0, best_elapsed_ms INTEGER NOT NULL DEFAULT 0, awarded_xp INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,day,challenge_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS admin_bonus(profile_id TEXT PRIMARY KEY, level_xp INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        CREATE TABLE IF NOT EXISTS plugin_settings(profile_id TEXT NOT NULL, plugin_id TEXT NOT NULL, version TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,plugin_id), FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
-        """)
-        columns = {row[1] for row in con.execute("PRAGMA table_info(profiles)")}
-        if "active_item" not in columns:
-            con.execute("ALTER TABLE profiles ADD COLUMN active_item TEXT NOT NULL DEFAULT ''")
-        if "ai_provider" not in columns:
-            con.execute("ALTER TABLE profiles ADD COLUMN ai_provider TEXT NOT NULL DEFAULT 'offline'")
-        # Upgrade the old one-item appearance to the new slot model without
-        # removing or rewriting profiles.active_item.
-        for row in con.execute("SELECT id,active_item FROM profiles WHERE active_item!=''").fetchall():
-            item_id = row["active_item"]
-            item = SHOP.get(item_id)
-            owned = con.execute("SELECT 1 FROM shop_items WHERE profile_id=? AND item_id=?", (row["id"], item_id)).fetchone()
-            if item and owned:
-                con.execute("INSERT OR IGNORE INTO companion_equipment(profile_id,slot,item_id) VALUES(?,?,?)", (row["id"], item["slot"], item_id))
-        for completed in con.execute("SELECT c.profile_id,c.task_id,c.completed_at FROM completions c"):
-            chapter = next((item for item in CURRICULUM if any(task["id"] == completed["task_id"] for task in item["tasks"])), None)
-            if chapter and not con.execute("SELECT 1 FROM learning_events WHERE profile_id=? AND task_id=? AND correct=1 LIMIT 1", (completed["profile_id"], completed["task_id"])).fetchone():
-                con.execute("INSERT INTO learning_events(profile_id,task_id,chapter_id,correct,created_at) VALUES(?,?,?,1,?)", (completed["profile_id"], completed["task_id"], chapter["id"], completed["completed_at"]))
+    # Versioned migrations (db_migrations.py): one transaction per step, verified backup of
+    # an existing database before it is upgraded, backfills run exactly once.
+    migrate_database(DB_PATH, context={"shop": SHOP, "task_chapter": TASK_CHAPTER}, backup_dir=DATA_ROOT / "backups")
 
 
 def all_tasks():
@@ -281,8 +244,11 @@ def all_tasks():
 
 
 TASK_XP = {task["id"]: int(task["xp"]) for chapter in CURRICULUM for task in chapter["tasks"]}
+TASK_CHAPTER = {task["id"]: chapter["id"] for chapter in CURRICULUM for task in chapter["tasks"]}
 LAB_XP = {lab["id"]: int(lab.get("xp", 0)) for lab in LABS}
 MAX_IMPORTED_XP = 1_000_000
+SAVE_FORMAT_VERSION = 2  # v2: adds ai_usage
+SUPPORTED_SAVE_VERSIONS = (1, 2)
 
 
 def clamp_int(value, low: int, high: int, default: int = 0) -> int:
@@ -1234,7 +1200,9 @@ class Handler(SimpleHTTPRequestHandler):
             profile["study_sessions"] = [dict(r) for r in con.execute("SELECT session_id,day,seconds,updated_at FROM study_sessions WHERE profile_id=? ORDER BY day DESC", (profile_id,))]
             profile["arena_attempts"] = [dict(r) for r in con.execute("SELECT day,challenge_id,attempts,best_score,best_elapsed_ms,awarded_xp,updated_at FROM arena_attempts WHERE profile_id=? ORDER BY day DESC", (profile_id,))]
             profile["plugin_settings"] = [dict(r) for r in con.execute("SELECT plugin_id,version,enabled,updated_at FROM plugin_settings WHERE profile_id=?", (profile_id,))]
-        return {"format": "cpp-adventure-save", "version": 1, "profile": profile}
+            profile["ai_usage"] = [dict(r) for r in con.execute("SELECT provider,model,input_tokens,output_tokens,requests,estimated_usd,updated_at FROM ai_usage WHERE profile_id=?", (profile_id,))]
+        # Save format v2 adds ai_usage. admin_bonus (test-panel level XP) is deliberately not exported.
+        return {"format": "cpp-adventure-save", "version": SAVE_FORMAT_VERSION, "profile": profile}
 
     def verify_profile_pin(self, profile, pin):
         stored = profile["pin_hash"]
@@ -1394,7 +1362,7 @@ class Handler(SimpleHTTPRequestHandler):
                 data = body.get("save", {})
                 if not isinstance(data, dict) or not isinstance(data.get("profile", {}), dict):
                     return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
-                if data.get("format") != "cpp-adventure-save" or data.get("version") != 1:
+                if data.get("format") != "cpp-adventure-save" or data.get("version") not in SUPPORTED_SAVE_VERSIONS:
                     return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
                 allowed = {t["id"] for t in all_tasks()}
                 saved = data.get("profile", {})
@@ -1416,6 +1384,7 @@ class Handler(SimpleHTTPRequestHandler):
                 study_sessions = saved.get("study_sessions", [])
                 arena_attempts = saved.get("arena_attempts", [])
                 plugin_settings = saved.get("plugin_settings", [])
+                ai_usage_rows = saved.get("ai_usage", []) if isinstance(saved.get("ai_usage", []), list) else []  # v2+; absent in v1 saves
                 if len(done) > len(allowed) or any(item.get("task_id") not in allowed for item in done):
                     return self.send_json({"error": "Yedekte geçersiz görev kaydı var."}, 400)
                 with db() as con:
@@ -1445,6 +1414,11 @@ class Handler(SimpleHTTPRequestHandler):
                     con.execute("DELETE FROM study_sessions WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM arena_attempts WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM plugin_settings WHERE profile_id=?", (profile_id,))
+                    con.execute("DELETE FROM ai_usage WHERE profile_id=?", (profile_id,))
+                    con.executemany("INSERT OR REPLACE INTO ai_usage(profile_id,provider,model,input_tokens,output_tokens,requests,estimated_usd,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                                    [(profile_id, row["provider"], str(row.get("model", ""))[:80], clamp_int(row.get("input_tokens"), 0, 10**10), clamp_int(row.get("output_tokens"), 0, 10**10),
+                                      clamp_int(row.get("requests"), 0, 10**7), max(0.0, min(10_000.0, float(row.get("estimated_usd") or 0) if isinstance(row.get("estimated_usd"), (int, float)) else 0.0)), str(row.get("updated_at", "restored"))[:40])
+                                     for row in ai_usage_rows[:200] if isinstance(row, dict) and row.get("provider") in ("openai", "ollama", "claude", "groq")])
                     con.executemany("INSERT INTO completions(profile_id,task_id,xp,completed_at) VALUES(?,?,?,?)", [(profile_id, x["task_id"], clamp_int(x.get("xp"), 0, TASK_XP[x["task_id"]]), str(x.get("completed_at","restored"))[:40]) for x in done])
                     valid_badges = {"first_steps","cat_coder","quest_hunter","legend","project_builder","first_boss","bug_squasher","quiz_whiz","code_runner","chapter_clear","world_explorer","boss_hunter","streak_keeper","daily_star","shop_lover","stylish_cat","algorithmist", *(quest["id"] for quest in SECRET_QUESTS)}
                     con.executemany("INSERT INTO achievements(profile_id,id) VALUES(?,?)", [(profile_id, x["id"]) for x in badges if x.get("id") in valid_badges])
@@ -1542,6 +1516,12 @@ class Handler(SimpleHTTPRequestHandler):
                         if plugin_id not in available_versions: continue
                         con.execute("INSERT INTO plugin_settings(profile_id,plugin_id,version,enabled,updated_at) VALUES(?,?,?,?,?)", (profile_id,plugin_id,available_versions[plugin_id],int(bool(item.get("enabled"))),str(item.get("updated_at","restored"))[:40]))
                 return self.send_json({"ok": True})
+            if path == "/api/backup/database":
+                # Whole database (all profiles), consistent online copy, verified with integrity_check.
+                with db() as con:
+                    if not valid_profile(con, body.get("profile_id")): return self.send_json({"error": "Profil bulunamadı."}, 404)
+                target = backup_database(DB_PATH, DATA_ROOT / "backups", "manual")
+                return self.send_json({"ok": True, "path": str(target)})
             if path == "/api/backup":
                 profile_id = body.get("profile_id")
                 save = self.export_profile(profile_id)
