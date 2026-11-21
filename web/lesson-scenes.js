@@ -110,14 +110,9 @@
     });
   }
 
+  App.after('renderLessonIntro', () => decorate());
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof renderLessonIntro !== 'function') return;
-    const core = renderLessonIntro;
-    window.renderLessonIntro = function (...args) {
-      const out = core.apply(this, args);
-      decorate().catch(error => console.error(error));
-      return out;
-    };
     let resizeTimer = 0;
     window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => players.forEach(p => document.contains(p.fig) ? p.relayout() : p.destroy()), 140); });
   });

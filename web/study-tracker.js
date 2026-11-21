@@ -25,10 +25,8 @@
       if (visibleSeconds - lastSent >= 30) flush();
     }, 1000);
   }
-  const previousBoot = boot;
-  boot = async function () { await previousBoot(); start(profileId); };
-  const previousSelect = selectProfile;
-  selectProfile = async function (...args) { await previousSelect(...args); start(profileId); };
+  App.after('boot', () => start(profileId));
+  App.after('selectProfile', () => start(profileId));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); lastTick = Date.now(); });
   window.addEventListener('pagehide', flush);
   window.addEventListener('beforeunload', flush);

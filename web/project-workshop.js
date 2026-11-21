@@ -46,10 +46,8 @@
     window.MonacoReady.then(monaco=>{if(!root.isConnected)return;editor=monaco.editor.create($('#workspace-monaco',root),{value:files[activeFile]||'',language:activeFile.endsWith('.cpp')||/\.(cc|cxx|h|hpp|hh)$/.test(activeFile)?'cpp':'plaintext',theme:'vs-dark',automaticLayout:true,fontSize:13,fontFamily:'Consolas, monospace',minimap:{enabled:false},scrollBeyondLastLine:false,wordWrap:'on',tabSize:4,wordBasedSuggestions:'off',suggest:{showWords:false}});editor.onDidChangeModelContent(()=>{files[activeFile]=editor.getValue()})});
   }
   async function refreshBuilder(){const root=document.querySelector('.multi-workspace');root?.remove();await renderBuilder()}
-  document.addEventListener('DOMContentLoaded',()=>{
-    originalRender=window.renderWorkshop;
-    if(typeof originalRender==='function')window.renderWorkshop=async(...args)=>{dispose();await originalRender(...args);await renderBuilder()};
-  });
+  App.before('renderWorkshop',()=>dispose());
+  App.after('renderWorkshop',()=>renderBuilder());
   document.addEventListener('cpp-adventure-language-changed',()=>{if(!document.querySelector('#view-workshop').classList.contains('hidden')){dispose();document.querySelector('.multi-workspace')?.remove();renderBuilder()}});
   window.addEventListener('beforeunload',captureEditor);
 })();

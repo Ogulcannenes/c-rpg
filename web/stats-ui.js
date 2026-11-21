@@ -15,9 +15,8 @@ async function renderStats(){
   host.querySelector('#stats-map').onclick=()=>{renderMap();setView('map')};
 }
 
-const renderMapCore=renderMap;
-renderMap=function(){
-  renderMapCore();
+// Adds mastery badges to the knowledge map (core.js hook).
+App.after('renderMap',()=>{
   fetch(`/api/journal?profile_id=${encodeURIComponent(profileId)}`).then(r=>r.json()).then(data=>{
     if(data.error)return;
     const byId=new Map(data.topics.map(x=>[x.id,x]));
@@ -31,7 +30,7 @@ renderMap=function(){
     const lead=document.querySelector('#view-map .view-lead');
     if(lead&&!document.querySelector('#map-mastery-legend'))lead.insertAdjacentHTML('afterend',`<div id="map-mastery-legend" class="map-legend"><span class="mastered">● ${st('mastered')}</span><span class="review">● ${st('review')}</span><span class="learning">● ${st('learning')}</span><span class="unseen">● ${st('unseen')}</span></div>`);
   }).catch(()=>{});
-};
+});
 
 document.addEventListener('click',event=>{
   const nav=event.target.closest('.nav-item[data-view="stats"]');

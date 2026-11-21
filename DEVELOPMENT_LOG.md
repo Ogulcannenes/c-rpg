@@ -234,3 +234,28 @@ where that code is rewritten anyway.
 services/repositories split is incremental work for later phases.
 
 **Results (Phase 4):** full suite three consecutive runs: 230 OK / 230 OK / 230 OK (~207–215 s).
+
+## Phase 5 — Frontend architecture (2026-11-21)
+
+- New `web/core.js`, loaded before every app script, owns the extension points. `app.js` calls
+  `App.install([...])` once for `api, setView, renderSidebar, renderHome, renderJournal, renderMap,
+  boot, selectProfile, renderLessonIntro, renderWorkshop, renderLabBoard`; feature modules only
+  register `App.before(name, fn)` / `App.after(name, fn)`. After-hooks of async functions run after
+  the promise resolves and are awaited in order; a throwing hook is logged and never breaks the call.
+- Converted the 11 global reassignments in `motion.js`, `onboarding.js`, `learning-ui.js`,
+  `stats-ui.js`, `study-tracker.js`, `lesson-scenes.js`, `project-workshop.js`, `lab-theater.js`.
+- Fixed a latent race: several modules installed their wrappers inside `DOMContentLoaded`, after
+  `app.js`'s own listener had already started `boot()` (the browser runs a microtask checkpoint
+  between listeners), so the first render could miss them. Hooks are now registered at script load.
+  The onboarding module's full replacements (`renderProfiles`, `profileForm`) also moved to load time.
+- `App.esc` is the shared HTML/attribute escaper (modules still have local copies; consolidated
+  during the Phase 6 UI rewrite).
+- Tests (`tests/test_architecture.py`): every hook targets an installed extension point; no module
+  reassigns one; `core.js` loads before `app.js` and all feature modules; `core.js` semantics run in
+  Node (before/after order, async after-hooks, failing hook isolation, idempotent install, escaping).
+- Browser check (Chrome, throwaway DB): all 11 extension points installed; adaptive home panel,
+  map entry animation + 20 chapter cards, journal insights, and the multi-file workshop (exactly one
+  instance via real nav click) render; no console errors.
+
+**Results (Phase 5):** full suite 233 OK / 233 OK. A third run (and a later single re-run) was stopped by
+Claude Code because the machine ran critically low on memory — not a test failure; not re-run yet.

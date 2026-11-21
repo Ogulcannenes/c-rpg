@@ -293,13 +293,13 @@
     if (top && p && top.dataset.av !== p.avatar) { top.innerHTML = window.avatarHtml(p.avatar, 'avatar-fill'); top.dataset.av = p.avatar; }
   }
 
+  // The onboarding module *provides* the profile screen and wizard (full replacements of the
+  // simple app.js versions) and extends the sidebar. Done at load time so boot() already sees them.
+  window.renderProfiles = renderProfilesScreen;
+  window.profileForm = existing => openWizard(existing);
+  App.after('renderSidebar', () => decorateChrome());
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof renderProfiles === 'function') window.renderProfiles = renderProfilesScreen;
-    if (typeof profileForm === 'function') window.profileForm = existing => openWizard(existing);
-    if (typeof renderSidebar === 'function') {
-      const core = renderSidebar;
-      window.renderSidebar = function (...args) { const out = core.apply(this, args); try { decorateChrome(); } catch (e) { console.error(e); } return out; };
-    }
     document.addEventListener('cpp-adventure-language-changed', () => { if (wiz && $('#onboard-overlay .ob-shell')) paintWizard(true); });
   });
 })();

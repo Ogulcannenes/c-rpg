@@ -348,28 +348,15 @@
     setTimeout(() => confetti(r.left + r.width / 2, r.top + r.height * .45, 40), 650);
   }, 0));
 
+  // Extension points (core.js): registered at load, so they are active before boot() renders.
+  App.after('api', ([url, body], result) => onApiResult(url, body, result));
+  App.after('setView', ([view]) => {
+    const el = document.getElementById(`view-${view}`);
+    if (el && !reduce()) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }
+  });
+  App.after('renderSidebar', () => afterSidebar());
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof api === 'function') {
-      const apiCore = api;
-      window.api = async function (url, body) {
-        const result = await apiCore(url, body);
-        try { onApiResult(url, body, result); } catch (_) {}
-        return result;
-      };
-    }
-    if (typeof setView === 'function') {
-      const setViewCore = setView;
-      window.setView = function (view, ...rest) {
-        const out = setViewCore.call(this, view, ...rest);
-        const el = document.getElementById(`view-${view}`);
-        if (el && !reduce()) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }
-        return out;
-      };
-    }
-    if (typeof renderSidebar === 'function') {
-      const sidebarCore = renderSidebar;
-      window.renderSidebar = function (...args) { const out = sidebarCore.apply(this, args); try { afterSidebar(); } catch (_) {} return out; };
-    }
     observer.observe(document.body, {childList: true, subtree: true});
     wake();
   });

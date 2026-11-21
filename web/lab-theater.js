@@ -614,14 +614,9 @@
     labInst.render(sim, index);
   }
 
+  App.after('renderLabBoard', () => renderLabTheater());
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof renderLabBoard !== 'function') return;
-    const core = renderLabBoard;
-    window.renderLabBoard = function (...args) {
-      const out = core.apply(this, args);
-      try { renderLabTheater(); } catch (error) { console.error(error); }
-      return out;
-    };
     let resizeTimer = 0;
     window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { try { labInst?.relayout(); } catch (_) {} }, 120); });
     // Klavye: ← → adım, boşluk oynat/duraklat (yalnızca laboratuvar açıkken ve yazı alanında değilken).

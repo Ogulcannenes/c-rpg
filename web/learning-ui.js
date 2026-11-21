@@ -1,7 +1,6 @@
 (() => {
-  const originalHome = renderHome;
-  renderHome = function () {
-    originalHome();
+  // Extends the home and journal views (core.js hooks, registered at load).
+  App.after('renderHome', () => {
     if (!profileId) return;
     fetch(`/api/journal?profile_id=${encodeURIComponent(profileId)}`).then(r => r.json()).then(data => {
       const head = document.querySelector('#view-home .section-head');
@@ -20,11 +19,9 @@
         if (suggestion.task_id) openTaskById(suggestion.task_id); else openChapter(chapter.number - 1);
       };
     }).catch(() => {});
-  };
+  });
 
-  const originalJournal = renderJournal;
-  renderJournal = async function () {
-    await originalJournal();
+  App.after('renderJournal', async () => {
     const host = document.querySelector('#view-journal');
     const data = await fetch(`/api/journal?profile_id=${encodeURIComponent(profileId)}`).then(r => r.json()).catch(() => null);
     if (!host || !data || data.error) return;
@@ -40,5 +37,5 @@
     section.innerHTML = `<span class="eyebrow">${L('ui.app.dataSuggestion')}</span><h2>${L('ui.app.adaptivePath')}</h2><p>${esc(path?.label || '')}${path?.chapter_id ? ` · ${esc(tx(appState.curriculum.find(ch => ch.id === path.chapter_id)?.title || {}))}` : ''}</p>${predictions.length ? `<h3 class="journal-subhead">${L('ui.app.reviewPredictions')}</h3>${items}` : `<p class="journal-note">${esc(data.prediction_note || (L('ui.app.predictionAfterThree')))}</p>`}<small class="journal-note">${L('ui.app.predictionCaveat')}</small>`;
     host.querySelector('.journal-columns')?.before(section);
     section.querySelectorAll('[data-insight-chapter]').forEach(button => button.onclick = () => openChapter(Number(button.dataset.insightChapter)));
-  };
+  });
 })();

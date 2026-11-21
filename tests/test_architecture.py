@@ -47,6 +47,62 @@ class StrictScriptPolicyTests(unittest.TestCase):
             self.assertIsNone(re.search(r"""\son[a-z]{3,20}=["'`$]""", path.read_text(encoding="utf-8")), path.name)
 
 
+class FrontendHookTests(unittest.TestCase):
+    """Phase 5: feature modules extend app.js through core.js hooks instead of reassigning globals."""
+
+    @classmethod
+    def setUpClass(cls):
+        import re
+        cls.web = ROOT / "web"
+        app = (cls.web / "app.js").read_text(encoding="utf-8")
+        cls.installed = set(re.findall(r"'([A-Za-z]+)'", re.search(r"App\.install\(\[([^\]]*)\]\)", app).group(1)))
+
+    def test_core_loads_before_app_and_every_module(self):
+        import re
+        order = re.findall(r'<script src="/([^"]+)"', (self.web / "index.html").read_text(encoding="utf-8"))
+        self.assertLess(order.index("core.js"), order.index("app.js"))
+        self.assertEqual(order.index("core.js"), min(i for i, name in enumerate(order) if not name.startswith(("vendor/", "monaco-boot"))))
+
+    def test_hooks_target_installed_extension_points_and_nothing_reassigns_them(self):
+        import re
+        for path in self.web.glob("*.js"):
+            if path.name in ("core.js", "app.js"):
+                continue
+            source = path.read_text(encoding="utf-8")
+            for name in re.findall(r"App\.(?:before|after)\('([A-Za-z]+)'", source):
+                self.assertIn(name, self.installed, f"{path.name} hooks {name}, which app.js does not install")
+            for name in self.installed:
+                self.assertNotRegex(source, rf"(?:window\.)?\b{name}\s*=\s*(?:async\s*)?(?:function|\()", f"{path.name} reassigns {name}")
+
+    def test_core_hook_semantics_in_node(self):
+        import shutil
+        import subprocess
+        node = shutil.which("node") or (r"C:\Program Files\nodejs\node.exe" if Path(r"C:\Program Files\nodejs\node.exe").exists() else None)
+        if not node:
+            self.skipTest("node is not installed")
+        script = (self.web / "core.js").read_text(encoding="utf-8") + r"""
+const log = [];
+window.render = function (x) { log.push('core:' + x); return x * 2; };
+window.load = async function () { log.push('core-async'); return 'v'; };
+App.before('render', ([x]) => log.push('before:' + x));
+App.after('render', ([x], out) => log.push('after:' + out));
+App.after('render', () => { throw new Error('broken hook'); });
+App.after('render', () => log.push('still-runs'));
+App.after('load', async (args, value) => { await null; log.push('after-async:' + value); });
+App.install(['render', 'load', 'missing']);
+App.install(['render']);  // idempotent
+const out = window.render(3);
+window.load().then(v => { log.push('resolved:' + v); console.log(JSON.stringify({out, log, esc: App.esc(`<a href="x">'&`)})); });
+"""
+        result = subprocess.run([node, "-e", "const window = globalThis; const console_error = console.error; console.error = () => {};\n" + script],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout.strip().splitlines()[-1])
+        self.assertEqual(data["out"], 6)
+        self.assertEqual(data["log"], ["before:3", "core:3", "after:6", "still-runs", "core-async", "after-async:v", "resolved:v"])
+        self.assertEqual(data["esc"], "&lt;a href=&quot;x&quot;&gt;&#39;&amp;")
+
+
 class ContentIndexTests(unittest.TestCase):
     def test_curriculum_invariants_hold(self):
         self.assertEqual(content_index.validate(), [])
