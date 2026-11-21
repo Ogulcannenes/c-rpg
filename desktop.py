@@ -71,6 +71,26 @@ def focus_existing_window(user32=None) -> bool:
     return True
 
 
+# A fixed loopback port keeps the page origin stable between launches, so the remembered profile,
+# language, text size and motion settings (localStorage) survive a restart. Port 0 is the fallback.
+PREFERRED_PORT = 47615
+
+
+def bind_app_server(preferred: int = PREFERRED_PORT):
+    try:
+        return server.create_app_server(preferred)
+    except OSError:
+        return server.create_app_server(0)
+
+
+def webview_storage_path() -> Path:
+    """WebView2 profile folder. pywebview's default private mode forgets localStorage on every
+    start, which sent the learner back to the profile picker each time."""
+    folder = server.DATA_ROOT / "webview"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
 def remove_sandbox_profile() -> int:
     """Run by the uninstaller. Learner profiles and progress in %LOCALAPPDATA% are not touched."""
     try:
@@ -115,7 +135,7 @@ def main(argv=None) -> int:
         log_startup("database initialization complete")
         # Port 0 is bound atomically by the OS (no probe-then-rebind race), and the start URL
         # carries a one-time code that gives this window the per-launch API session cookie.
-        http_server, _auth, start_url = server.create_app_server(0)
+        http_server, _auth, start_url = bind_app_server()
         port = http_server.server_address[1]
         log_startup(f"local HTTP listener created on 127.0.0.1:{port}")
         worker = threading.Thread(target=http_server.serve_forever, name="cpp-adventure-local", daemon=True)
@@ -132,7 +152,7 @@ def main(argv=None) -> int:
             background_color="#0b0d14",
         )
         log_startup("desktop window created")
-        webview.start(debug=False)
+        webview.start(debug=False, private_mode=False, storage_path=str(webview_storage_path()))
         log_startup("desktop window closed normally")
         return 0
     except Exception as error:

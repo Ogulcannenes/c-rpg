@@ -71,6 +71,18 @@ C++ öğrenmek için kedili bir macera oyunu. Dersler, görevler ve geri bildiri
 
 ## Kurulum
 
+### GitHub'dan indirip kurma
+
+1. **Projeyi indir** — iki yoldan biri:
+   - https://github.com/Ogulcannenes/c-rpg adresini aç → yeşil **Code** düğmesi → **Download ZIP**. Arşivi örneğin `C:\Games\c-rpg` klasörüne çıkar.
+   - Ya da Git ile: `git clone https://github.com/Ogulcannenes/c-rpg.git`
+2. **Python 3.10+ kur:** https://www.python.org/downloads/ — kurulumda **Add python.exe to PATH** kutusunu işaretle.
+3. **G++ derleyicisini kur** — aşağıdaki 1. adım (MSYS2).
+4. Proje klasöründe **`setup-desktop.bat`** dosyasına çift tıkla (bir kez, internet gerekir), sonra **`start-desktop.bat`** — uygulama kendi penceresinde açılır.
+5. Kısayollu gerçek bir kurulum dosyası istersen **`build-windows.bat`** çalıştır; dosya `dist\` klasörüne çıkar (bkz. [Kaynak koddan paket oluşturma](#kaynak-koddan-paket-oluşturma)).
+
+Windows internetten gelen .bat dosyaları için uyarırsa: **Ek bilgi → Yine de çalıştır**; ya da çıkarmadan önce ZIP'e sağ tık → Özellikler → **Engellemeyi kaldır**.
+
 ### 1. C++ derleyicisini kur (bir kez)
 
 1. https://www.msys2.org adresinden MSYS2'yi indirip kur. Varsayılan konum `C:\msys64` uygundur. Alternatif: `winget install MSYS2.MSYS2`.

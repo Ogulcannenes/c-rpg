@@ -503,3 +503,13 @@ Full report with scores, measurements and before/after screenshots: `docs/UX_AUD
 - Wide screens: from 1600px the top bar and content share `clamp(1180px, 78vw, 1480px)`, and the top bar is aligned to the content at all widths. Verified at 1920×1080 (emulated): both span 345–1825px with no overflow. Screenshot: `docs/screenshots/ux/07-after-home-1920.jpeg`.
 - One name per section: the breadcrumb and the window title use the sidebar label (before: "Mülakat modu" in the menu, "Mülakat" in the breadcrumb). The h1 texts are unchanged.
 - Suite: **302 OK**. Not independently re-scored.
+
+## Sidebar missing after install; GitHub download guide (2026-11-21)
+
+- Bug (reported by the owner): after installing, the left menu was missing on the first launches.
+  - Cause 1: pywebview starts WebView2 in private mode by default, so localStorage (remembered profile, text size, motion) was lost on every start and the profile picker came back each time.
+  - Cause 2: picking a profile there (`selectProfile`) never removed `body.no-profile`, the class that hides the sidebar. Only the new-profile wizard removed it.
+- Fix: `selectProfile` removes `no-profile`; the desktop window uses `private_mode=False` with storage in `DATA_ROOT/webview`; the server prefers fixed port 47615 (falls back to a free port) so the origin, and with it localStorage, stays the same between launches.
+- Verified in the browser: profile picker → pick profile → sidebar visible (260px), title "Ana üs". Not verified in an installed WebView2 build (no rebuild done).
+- 3 regression tests added. Suite: **305 OK**.
+- README (RU/EN/TR): "download from GitHub and install" section.

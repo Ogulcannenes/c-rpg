@@ -55,6 +55,18 @@
 
 ### Установка
 
+### Скачать с GitHub и установить
+
+1. **Скачай проект** — один из способов:
+   - Открой https://github.com/Ogulcannenes/c-rpg → зелёная кнопка **Code** → **Download ZIP**. Распакуй архив, например в `C:\Games\c-rpg`.
+   - Или с Git: `git clone https://github.com/Ogulcannenes/c-rpg.git`
+2. **Установи Python 3.10+** с https://www.python.org/downloads/ — в установщике отметь **Add python.exe to PATH**.
+3. **Установи компилятор G++** — см. шаг 1 ниже (MSYS2).
+4. В папке проекта дважды щёлкни **`setup-desktop.bat`** (один раз, нужен интернет), затем **`start-desktop.bat`** — приложение откроется в окне.
+5. Хочешь настоящий установщик с ярлыками? Запусти **`build-windows.bat`** — файл установки появится в `dist\` (подробнее в [Сборка из исходников](#сборка-из-исходников)).
+
+Если Windows предупреждает о файлах .bat из интернета: **Подробнее → Выполнить в любом случае**, или правый щелчок по ZIP → Свойства → **Разблокировать** перед распаковкой.
+
 **1. Установи компилятор C++ (один раз)**
 
 1. Скачай и установи MSYS2 с https://www.msys2.org. Путь по умолчанию `C:\msys64` подходит. Можно и так: `winget install MSYS2.MSYS2`.
@@ -258,6 +270,18 @@ A cat-themed adventure game for learning C++. Lessons, tasks and feedback are in
 | Python 3.10+ | Only to run from source | The installed app does not need Python. |
 
 ### Installation
+
+### Download from GitHub and install
+
+1. **Download the project** — either:
+   - Open https://github.com/Ogulcannenes/c-rpg → green **Code** button → **Download ZIP**, and extract it, e.g. to `C:\Games\c-rpg`.
+   - Or with Git: `git clone https://github.com/Ogulcannenes/c-rpg.git`
+2. **Install Python 3.10+** from https://www.python.org/downloads/ — tick **Add python.exe to PATH** in the installer.
+3. **Install the G++ compiler** — see step 1 below (MSYS2).
+4. In the project folder double-click **`setup-desktop.bat`** (once, needs internet), then **`start-desktop.bat`** — the app opens in its window.
+5. Want a real installer with shortcuts? Run **`build-windows.bat`**; the setup file appears in `dist\` (see [Building from source](#building-from-source)).
+
+If Windows warns about .bat files from the internet: **More info → Run anyway**, or right-click the ZIP → Properties → **Unblock** before extracting.
 
 **1. Install the C++ compiler (once)**
 

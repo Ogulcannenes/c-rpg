@@ -171,6 +171,48 @@ class CompilerDetectionTests(unittest.TestCase):
         self.assertIsNone(server.find_compiler({"PATH": str(self.root / "nothing")}, roots=(str(self.root / "none"),)))
 
 
+class RememberedStateTests(unittest.TestCase):
+    """Reported bug: after installing, the sidebar was missing on the first launches. pywebview's
+    private mode forgot localStorage, so every start showed the profile picker, and picking a profile
+    there never removed body.no-profile (the class that hides the sidebar)."""
+
+    def test_window_keeps_its_storage_and_picking_a_profile_shows_the_sidebar(self):
+        source = (ROOT / "desktop.py").read_text(encoding="utf-8")
+        self.assertIn("private_mode=False", source)
+        self.assertIn("storage_path=str(webview_storage_path())", source)
+        app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        select = app[app.index("async function selectProfile("):]
+        select = select[:select.index(chr(10))]
+        self.assertIn("document.body.classList.remove('no-profile')", select)
+
+    def test_stable_port_with_fallback_when_it_is_taken(self):
+        import socket
+        blocker = socket.socket()
+        blocker.bind(("127.0.0.1", 0))
+        blocker.listen(1)
+        taken = blocker.getsockname()[1]
+        try:
+            httpd, _auth, url = desktop.bind_app_server(taken)
+            try:
+                self.assertNotEqual(httpd.server_address[1], taken, "falls back to a free port")
+                self.assertIn(f":{httpd.server_address[1]}/__session?code=", url)
+            finally:
+                httpd.server_close()
+        finally:
+            blocker.close()
+        httpd, _auth, _url = desktop.bind_app_server(taken)  # free again: the preferred port is used
+        try:
+            self.assertEqual(httpd.server_address[1], taken)
+        finally:
+            httpd.server_close()
+
+    def test_storage_folder_lives_with_the_user_data(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(server, "DATA_ROOT", Path(folder)):
+            path = desktop.webview_storage_path()
+            self.assertEqual(path, Path(folder) / "webview")
+            self.assertTrue(path.is_dir())
+
+
 class LegacyPointerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
