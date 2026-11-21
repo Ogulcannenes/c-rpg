@@ -903,9 +903,20 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print("[C++ Adventure] " + fmt % args)
 
+    def send_header(self, keyword, value):
+        if keyword.lower() == "cache-control":
+            self._cache_control_sent = True
+        super().send_header(keyword, value)
+
     def end_headers(self):
         for name, value in SECURITY_HEADERS.items():
             self.send_header(name, value)
+        if not getattr(self, "_cache_control_sent", False):
+            # App files revalidate on every launch (cheap 304s) so an update is never hidden behind
+            # a stale WebView2 cache; the vendored editor never changes between versions.
+            path = urlparse(getattr(self, "path", "") or "").path
+            self.send_header("Cache-Control", "public, max-age=86400" if path.startswith("/vendor/") else "no-cache")
+        self._cache_control_sent = False
         super().end_headers()
 
     @property

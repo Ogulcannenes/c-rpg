@@ -86,6 +86,18 @@ class Phase7EconomyTests(unittest.TestCase):
         self.assertEqual(after["lifetime_xp"], before["lifetime_xp"])
         self.assertEqual((after["level"], after["level_xp"]), (before["level"], before["level_xp"]))
 
+    def test_static_files_revalidate_so_updates_are_not_hidden_by_cache(self):
+        def cache_header(path):
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=30)
+            conn.request("GET", path)
+            response = conn.getresponse()
+            response.read()
+            conn.close()
+            return response.status, response.getheader("Cache-Control")
+        self.assertEqual(cache_header("/app.js"), (200, "no-cache"))
+        self.assertEqual(cache_header("/vendor/vs/loader.js"), (200, "public, max-age=86400"))
+        self.assertEqual(cache_header("/api/health")[1], "no-store")
+
     def test_arena_cannot_claim_a_faster_time_than_the_server_saw(self):
         pid = self.profile("Speedrunner")
         _, arena = self.request("GET", f"/api/arena?profile_id={pid}")
