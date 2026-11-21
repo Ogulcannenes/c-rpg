@@ -37,11 +37,25 @@ RULES = {
     'template_function': {'tr': 'template ile genel bir fonksiyon yaz ve en az iki farklı türle çağır', 'ru': 'Напиши обобщённую функцию через template и вызови её минимум с двумя типами'},
     'lambda_capture': {'tr': 'Yakalama listesi ([...]) olan bir lambda kullan', 'ru': 'Используй лямбду со списком захвата ([...])'},
     'map_set': {'tr': 'std::map veya std::set (ya da unordered sürümleri) kullan ve sonucu yazdır', 'ru': 'Используй std::map или std::set (или unordered-версии) и выведи результат'},
+    # Modern C++ track (c21-c24).
+    'move_semantics': {'tr': 'Kaynağı std::move ve && (rvalue referansı) ile kopyalamadan taşı', 'ru': 'Перемести ресурс без копирования через std::move и && (rvalue-ссылку)'},
+    'rule_of_five': {'tr': 'Kaynağı yöneten sınıfa yıkıcı, derin kopyalayan kopya kurucu ve taşıyıcı kurucu yaz (Beşler Kuralı)', 'ru': 'Напиши для класса-владельца деструктор, глубоко копирующий и перемещающий конструкторы (правило пяти)'},
+    'vocabulary_types': {'tr': 'std::optional, std::variant veya std::string_view kullan ve sonucu yazdır', 'ru': 'Используй std::optional, std::variant или std::string_view и выведи результат'},
+    'string_view_parse': {'tr': 'Metni std::string_view ile kopyalamadan tara ve sonucu std::optional ile döndür', 'ru': 'Разбери текст через std::string_view без копирования и верни результат через std::optional'},
+    'constrained_template': {'tr': 'Şablonu bir concept (ör. std::integral) veya requires ile kısıtla', 'ru': 'Ограничь шаблон концептом (например, std::integral) или requires'},
+    'custom_concept': {'tr': "Kendi concept'ini requires ifadesiyle tanımla ve şablonda kullan", 'ru': 'Определи собственный концепт через requires и используй его в шаблоне'},
+    'ranges_pipeline': {'tr': 'std::views görünümlerini | ile zincirleyip sonucu yazdır', 'ru': 'Соедини представления std::views через | и выведи результат'},
+    'thread_join': {'tr': 'std::thread veya std::jthread başlat ve sonucu yazdırmadan önce bitmesini bekle', 'ru': 'Запусти std::thread или std::jthread и дождись его завершения до вывода'},
+    'shared_counter': {'tr': 'Thread başlat ve ortak sayacı std::mutex (lock_guard/scoped_lock) veya std::atomic ile koru', 'ru': 'Запусти потоки и защити общий счётчик через std::mutex (lock_guard/scoped_lock) или std::atomic'},
 }
 
 
 # Rules checked only with the token-based structural checker (no clang AST needed).
-TOKEN_ONLY_RULES = {'pointer_dynamic', 'smart_pointer', 'raii_scope', 'virtual_dispatch', 'template_function', 'lambda_capture', 'map_set'}
+TOKEN_ONLY_RULES = {'pointer_dynamic', 'smart_pointer', 'raii_scope', 'virtual_dispatch', 'template_function', 'lambda_capture', 'map_set',
+                    'move_semantics', 'rule_of_five', 'vocabulary_types', 'string_view_parse', 'constrained_template', 'custom_concept',
+                    'ranges_pipeline', 'thread_join', 'shared_counter'}
+STANDARD_CONCEPTS = {"integral", "signed_integral", "unsigned_integral", "floating_point", "same_as", "convertible_to",
+                     "derived_from", "totally_ordered", "equality_comparable", "invocable", "regular", "copyable", "movable"}
 
 
 def _walk(node):
@@ -284,6 +298,32 @@ def _fallback(source, rule):
         calls = {t[i] for i in range(len(t) - 1) if is_id(t[i]) and t[i + 1] == "("}
         definitions = {t[i + 1] for i in range(len(t) - 3) if t[i] in {"int", "double", "float", "bool", "string"} and is_id(t[i + 1]) and t[i + 2] == "("}
         return bool(strings and "if" in t and {"for", "while"} & set(t) and calls & definitions and cout and "return" in t)
+
+    def uses(*names):
+        # A name counts when it is used in code, not just named by `#include <name>`.
+        return any(t[i] in names and not (i >= 2 and t[i - 2] == "include" and t[i - 1] == "<") for i in range(len(t)))
+
+    if rule == "move_semantics":
+        return bool(has("std", "::", "move") and "&&" in t and cout)
+    if rule == "rule_of_five":
+        return bool("~" in t and "&&" in t and has("delete", "[", "]") and has("std", "::", "move") and cout)
+    if rule == "vocabulary_types":
+        return bool((has("optional", "<") or has("variant", "<") or uses("string_view")) and cout)
+    if rule == "string_view_parse":
+        return bool(uses("string_view") and has("optional", "<") and cout)
+    if rule == "constrained_template":
+        constrained = "requires" in t or "concept" in t or any(t[i] == "::" and t[i + 1] in STANDARD_CONCEPTS for i in range(len(t) - 1))
+        return bool(("template" in t or "auto" in t) and constrained and cout)
+    if rule == "custom_concept":
+        return bool("concept" in t and "requires" in t and cout)
+    if rule == "ranges_pipeline":
+        return bool(has("views", "::") and "|" in t and cout)
+    started = uses("thread", "jthread")
+    joined = "join" in t or uses("jthread")
+    if rule == "thread_join":
+        return bool(started and joined and cout)
+    if rule == "shared_counter":
+        return bool(started and joined and uses("mutex", "atomic", "lock_guard", "scoped_lock", "unique_lock") and cout)
     return False
 
 

@@ -38,7 +38,7 @@ KIND = {"fix": 4, "code": 6, "boss": 7}
 @unittest.skipUnless(server.COMPILER, "C++ compiler is required")
 class AdvancedChapterTests(unittest.TestCase):
     def test_new_chapters_are_wired_into_the_learning_map(self):
-        self.assertEqual([c["id"] for c in CURRICULUM[15:]], ["c16", "c17", "c18", "c19", "c20"])
+        self.assertEqual([c["id"] for c in CURRICULUM[15:20]], ["c16", "c17", "c18", "c19", "c20"])
         for number in range(16, 21):
             self.assertTrue(set(PREREQUISITES[number]) < set(range(1, number)) | {16, 17, 18, 19})
             chapter = CURRICULUM[number - 1]
@@ -47,7 +47,7 @@ class AdvancedChapterTests(unittest.TestCase):
             self.assertEqual(len(chapter["guide"]["tr"]), len(chapter["guide"]["ru"]))
 
     def test_reference_solutions_pass_and_starters_fail(self):
-        for chapter in CURRICULUM[15:]:
+        for chapter in CURRICULUM[15:20]:
             for kind, index in KIND.items():
                 task = chapter["tasks"][index]
                 with self.subTest(chapter=chapter["id"], kind=kind):

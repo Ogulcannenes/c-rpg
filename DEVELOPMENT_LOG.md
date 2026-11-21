@@ -1,4 +1,4 @@
-# C++ Adventure — Development Log
+﻿# C++ Adventure — Development Log
 
 Modernization work on branch `modernization`. Each phase lists what changed, why,
 which tests ran, and what is still open. Test results are copied from real runs only.
@@ -322,3 +322,42 @@ Claude Code because the machine ran critically low on memory — not a test fail
 - **Not done in Phase 7 (deferred):** server-side hint tracking (hints are still client-side and
   give no reward penalty), shuffling interview options, shop rebalancing; workshop projects still
   send their test cases (they are shown to the learner by design).
+
+### Phase 7 follow-up (deferred items)
+
+- Hints: text is no longer in `/api/state` (only `hint_count`). `POST /api/hint {task_id, level, lang}`
+  reveals one level at a time, in order (409 `hint_order` otherwise), and records it in the new
+  `hint_reveals` table (migration 4, `ON DELETE CASCADE`). `/api/submit` applies the 10 % penalty if
+  the server revealed a hint, whatever the client sends. Profile import clears the table too.
+- Interview: all 7 choice questions stored the correct option first, so "always pick A" scored 100 %.
+  Options are now shuffled per session (deterministic, `interview_option_order`) and graded by
+  mapping the shown index back.
+- Predict tasks no longer ship `starter` (it equals the answer).
+- Shop rebalancing: still not done.
+
+## Phase 8 — Modern C++ curriculum (2026-11-21)
+
+- New self-contained module `modern_cpp.py` adds four chapters (24 chapters / 192 tasks total),
+  wired into `curriculum.py` before `task_clarity`. The old index-aligned tables stay at 20.
+  - c21 Move semantics and the Rule of Five (prereqs c17, c12)
+  - c22 optional / variant / string_view (c09, c19)
+  - c23 Concepts and Ranges, C++20 (c19, c13)
+  - c24 Concurrency: real `std::thread`, `std::mutex`, `std::atomic`, `std::jthread` (c21, c19)
+- Each chapter: TR + RU lesson, 5 guide sections with code, 8 missions in the usual order. Code
+  missions have 3–4 hidden tests and a new structural concept rule (`move_semantics`,
+  `rule_of_five`, `vocabulary_types`, `string_view_parse`, `constrained_template`,
+  `custom_concept`, `ranges_pipeline`, `thread_join`, `shared_counter`). `#include <thread>` alone
+  does not count as using threads; an unsynchronised counter fails `shared_counter`.
+- Verified in the real sandbox (static C++20, Windows): threads/mutex/atomic, optional/variant,
+  concepts/ranges, jthread/async all compile and run.
+- `tests/test_modern_cpp.py`: reference solutions for all 16 code missions pass every hidden test
+  and concept check; no starter passes as-is; all 8 predictions match real program output; TR
+  slots contain no Cyrillic and RU prompts are Russian; quiz answers are among the offered options.
+- Four new world-map zones (TR/RU); fixed `rpg-ui.js` zone fallback (`[a,b]||x` was always truthy).
+- Count-based assertions in older tests updated (20→24 chapters, 160→192 tasks). Each new chapter also
+  got an animated walkthrough scene (`lesson_scenes.py`, section 2) and its own map icon (`ch-21`…`ch-24`).
+- Full suite: **262 tests OK** (265 s).
+- Browser check: skill tree draws 24 nodes / 39 edges with correct prerequisites; dashboard shows
+  0/192 tasks, 0/24 chapters; hint buttons fetch text from the server in order.
+- Not done: C++23 topics (`std::expected`, `std::print`) — the bundled GCC must be checked first;
+  multi-file projects.

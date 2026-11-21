@@ -1325,7 +1325,11 @@
         "Smart Pointer Lagoon",
         "Inheritance Citadel",
         "Template Observatory",
-        "Container Archives"
+        "Container Archives",
+        "Move Rapids",
+        "Optional Oasis",
+        "Concept Peaks",
+        "Thread Foundry"
       ],
       "ru": [
         "Лагерь C++",
@@ -1347,7 +1351,11 @@
         "Лагуна умных указателей",
         "Цитадель наследования",
         "Обсерватория шаблонов",
-        "Архив контейнеров"
+        "Архив контейнеров",
+        "Пороги перемещения",
+        "Оазис optional",
+        "Пики концептов",
+        "Кузница потоков"
       ]
     },
     "pairs": {

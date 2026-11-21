@@ -31,7 +31,7 @@
     const completed=typeof completedSet==='function'?completedSet():new Set();
     const routeStates=chapters.map((chapter,index)=>{const boss=(chapter.tasks||[]).find(task=>task.kind==='boss');return {unlocked:typeof chapterUnlocked==='function'&&chapterUnlocked(index),cleared:!!boss&&completed.has(boss.id)}});const currentZone=routeStates.findIndex(z=>z.unlocked&&!z.cleared);
     const world=chapters.map((chapter,index)=>{
-      const zone=[WORLD_ZONES.tr[index],WORLD_ZONES.ru[index]]||[chapter.title?.tr||`Region ${index+1}`,chapter.title?.ru||`Регион ${index+1}`];
+      const zone=[WORLD_ZONES.tr[index]||chapter.title?.tr||`Region ${index+1}`,WORLD_ZONES.ru[index]||chapter.title?.ru||`Регион ${index+1}`];
       const unlocked=typeof chapterUnlocked==='function'&&chapterUnlocked(index);
       const done=(chapter.tasks||[]).filter(task=>completed.has(task.id)).length;
       const boss=(chapter.tasks||[]).find(task=>task.kind==='boss');

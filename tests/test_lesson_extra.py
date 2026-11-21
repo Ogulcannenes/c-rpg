@@ -44,7 +44,7 @@ class LessonExtraTests(unittest.TestCase):
                 self.assertEqual(server.normalize_output(result["output"]), chapter["predict"][2])
 
     def test_reference_solutions_pass_every_warm_up_test_and_contain_required_tokens(self):
-        self.assertEqual(len(SOLUTIONS), len(CURRICULUM))
+        self.assertEqual(len(SOLUTIONS), len(CHAPTERS))  # core chapters; c21-c24: test_modern_cpp
         for chapter, solution in zip(CURRICULUM, SOLUTIONS):
             warm = next(task for task in chapter["tasks"] if task["id"].endswith("-w1"))
             with self.subTest(task=warm["id"]):

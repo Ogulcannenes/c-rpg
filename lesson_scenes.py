@@ -572,6 +572,50 @@ SCENES = [
           {"line": 6, "mark": {'"top"': "active"}, "out": "top 2 ", "say": ("…sonra top.", "…затем top.")},
           {"line": 7, "out": "0", "note": 'stok.count("ip") = 0', "say": ('count("ip") 0 döner. [] kullansaydık yanlışlıkla boş bir "ip" kaydı oluşurdu.', 'count("ip") возвращает 0. Если бы мы использовали [], случайно создалась бы пустая запись "ip".')},
       ], array_name="std::map<std::string, int> stok", sorted=True),
+
+    # ——— 21. Taşıma semantiği ———
+    S("c21", 2, ("Kopya mı, taşıma mı?", "Копия или перемещение?"), "memory",
+      ["std::vector<int> a{1, 2, 3};", "std::vector<int> b = a;", "std::vector<int> c = std::move(a);", "std::cout << b.size() << c.size() << a.size();"],
+      [
+          {"line": 1, "new": [("heap#1", "int[3]", "{1, 2, 3}", {"heap": True, "size": 12}), ("a", "vector<int>", None, {"to": "heap#1"})], "say": ("a'nın elemanları heap'te durur; a yalnızca onları gösteren küçük bir tutamaktır.", "Элементы a лежат в куче; сам a — лишь небольшой дескриптор, который на них указывает.")},
+          {"line": 2, "new": [("heap#2", "int[3]", "{1, 2, 3}", {"heap": True, "size": 12}), ("b", "vector<int>", None, {"to": "heap#2"})], "say": ("Kopya: heap'te yeni bir alan ayrılır ve üç eleman tek tek çoğaltılır. Büyük veride pahalıdır.", "Копия: в куче выделяется новая память, и все три элемента дублируются. Для больших данных это дорого.")},
+          {"line": 3, "new": [("c", "vector<int>", None, {"to": "heap#1"})], "to": {"a": None}, "mark": {"a": "moved"}, "say": ("std::move ile c, a'nın heap alanını olduğu gibi devralır; hiçbir eleman kopyalanmaz. a boş kalır.", "Через std::move c забирает память a целиком; ни один элемент не копируется. a остаётся пустым.")},
+          {"line": 4, "out": "330", "say": ("b ve c üçer eleman tutar, taşınmış a'nın boyutu 0'dır.", "b и c содержат по три элемента, размер перемещённого a — 0.")},
+      ]),
+
+    # ——— 22. optional, variant, string_view ———
+    S("c22", 2, ("string_view kopyalamaz", "string_view не копирует"), "memory",
+      ['std::string metin = "pati kedi";', "std::string_view ilk = std::string_view(metin).substr(0, 4);", "std::string kopya = metin.substr(5);", 'std::cout << ilk << " " << kopya;'],
+      [
+          {"line": 1, "new": [("heap#1", "char[9]", '"pati kedi"', {"heap": True, "size": 9}), ("metin", "std::string", None, {"to": "heap#1"})], "say": ("metin karakterlerini kendi belleğinde tutar ve onların sahibidir.", "metin хранит символы в своей памяти и владеет ими.")},
+          {"line": 2, "new": [("ilk", "string_view · 4", None, {"to": "heap#1", "size": 16})], "say": ("string_view yalnızca bir işaretçi ve bir uzunluktur (4): aynı karakterlere bakar, yeni bellek ayırmaz.", "string_view — это просто указатель и длина (4): он смотрит на те же символы и не выделяет память.")},
+          {"line": 3, "new": [("heap#2", "char[4]", '"kedi"', {"heap": True, "size": 4}), ("kopya", "std::string", None, {"to": "heap#2"})], "say": ("std::string::substr ise yeni bir string üretir: karakterler kopyalanır.", "А std::string::substr создаёт новую строку: символы копируются.")},
+          {"line": 4, "out": "pati kedi", "mark": {"ilk": "deref-from", "heap#1": "deref"}, "say": ("ilk, metin yaşadığı sürece geçerlidir; metin yok olursa ilk sarkık kalır.", "ilk корректен, пока жив metin; если metin исчезнет, ilk станет висячим.")},
+      ]),
+
+    # ——— 23. Concepts ve ranges ———
+    S("c23", 2, ("Tembel görünüm hattı", "Ленивый конвейер представлений"), "array",
+      ["std::vector<int> v{5, 2, 8, 1, 6};", "auto ciftKare = v | std::views::filter([](int x) { return x % 2 == 0; })", "                  | std::views::transform([](int x) { return x * x; });", 'for (int x : ciftKare) std::cout << x << " ";'],
+      [
+          {"line": 1, "new": [(f"v[{i}]", "int", x, arr(i)) for i, x in enumerate([5, 2, 8, 1, 6])], "say": ("v beş sayı tutar.", "v содержит пять чисел.")},
+          {"line": 3, "note": ("henüz hesap yok", "пока ничего не вычислено"), "say": ("Görünüm hattı kuruldu ama tembeldir: henüz hiçbir eleman işlenmedi, yeni vector de yok.", "Конвейер построен, но он ленивый: ни один элемент ещё не обработан, нового vector нет.")},
+          {"line": 4, "mark": {"v[0]": "active"}, "note": "5 → filter ✗", "say": ("Döngü ilk elemanı ister: 5 tek sayı, filter onu geçirmez.", "Цикл запрашивает первый элемент: 5 нечётное, filter его не пропускает.")},
+          {"line": 4, "mark": {"v[1]": "active"}, "note": "2 → 2·2 = 4", "out": "4 ", "say": ("2 çift: filter geçirir, transform karesini alır → 4.", "2 чётное: filter пропускает, transform возводит в квадрат → 4.")},
+          {"line": 4, "mark": {"v[2]": "active"}, "note": "8 → 64", "out": "64 ", "say": ("8 → 64. Her eleman ancak istendiği anda hesaplanır.", "8 → 64. Каждый элемент вычисляется только в момент запроса.")},
+          {"line": 4, "mark": {"v[3]": "active"}, "note": "1 → filter ✗", "say": ("1 tek, atlanır.", "1 нечётное, пропускается.")},
+          {"line": 4, "mark": {"v[4]": "active"}, "note": "6 → 36", "out": "36 ", "say": ("6 → 36. v hiç değişmedi; görünüm yalnızca ona baktı.", "6 → 36. v не изменился; представление только смотрело на него.")},
+      ], array_name="std::vector<int> v"),
+
+    # ——— 24. Eşzamanlılık ———
+    S("c24", 2, ("atomic sayaç ve jthread", "Атомарный счётчик и jthread"), "memory",
+      ["std::atomic<int> sayac{0};", "{", "    std::jthread a([&] { for (int i = 0; i < 1000; ++i) ++sayac; });", "    std::jthread b([&] { for (int i = 0; i < 1000; ++i) ++sayac; });", "}   // a ve b burada join eder", "std::cout << sayac.load();"],
+      [
+          {"line": 1, "new": [("sayac", "atomic<int>", 0)], "say": ("sayac atomiktir: ++ işlemi tek ve bölünmez bir adımdır.", "sayac атомарный: ++ — одна неделимая операция.")},
+          {"line": 3, "new": [("a", "jthread", ("çalışıyor", "работает"), {"size": 8})], "set": {"sayac": 412}, "say": ("a başladı ve sayacı artırmaya koyuldu; main beklemeden devam eder.", "Поток a запущен и увеличивает счётчик; main продолжает работу, не дожидаясь.")},
+          {"line": 4, "new": [("b", "jthread", ("çalışıyor", "работает"), {"size": 8})], "set": {"sayac": 1187}, "say": ("b de aynı anda artırıyor. Sıra karışık olsa da atomik ++ sayesinde hiçbir artış kaybolmaz.", "b одновременно тоже увеличивает. Порядок перемешан, но благодаря атомарному ++ ни одно увеличение не теряется.")},
+          {"line": 5, "set": {"sayac": 2000, "a": ("bitti", "завершён"), "b": ("bitti", "завершён")}, "say": ("Kapsam bitince jthread'ler kendiliğinden join eder: main ikisinin de bitmesini bekler.", "В конце области видимости jthread сами вызывают join: main ждёт завершения обоих.")},
+          {"line": 6, "del": ["a", "b"], "out": "2000", "say": ("Sonuç her çalıştırmada 2000. Düz int ile artışlar kaybolabilir ve sonuç değişirdi.", "Результат при каждом запуске — 2000. С обычным int увеличения могли бы теряться, и результат менялся бы.")},
+      ]),
 ]
 
 

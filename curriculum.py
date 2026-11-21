@@ -148,5 +148,10 @@ for _index, _chapter in enumerate(CURRICULUM):
     _t = _chapter["tasks"]
     _chapter["tasks"] = [_t[0], _t[1], _quiz, _predict, _t[2], _warm, _t[3], _t[4]]
 
+# Modern C++ track (move semantics, C++17 vocabulary types, C++20 concepts/ranges,
+# real threads). These chapters are self-contained, so the tables above stay at 20.
+from modern_cpp import modern_chapters
+CURRICULUM.extend(modern_chapters(len(CURRICULUM) + 1))
+
 from task_clarity import apply as _clarify_tasks
 _clarify_tasks(CURRICULUM)

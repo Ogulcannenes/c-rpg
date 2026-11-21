@@ -280,12 +280,12 @@ class CoreSystemTests(unittest.TestCase):
             con.close()
 
     def test_curriculum_is_bilingual_and_chapter_gated(self):
-        self.assertEqual(len(server.CURRICULUM), 20)
+        self.assertEqual(len(server.CURRICULUM), 24)  # 20 core chapters + the modern C++ track
         self.assertTrue(all(len(c["tasks"]) == 8 for c in server.CURRICULUM))
         self.assertTrue(all(set(c["title"]) == {"tr", "ru"} and set(c["lesson"]) == {"tr", "ru"} for c in server.CURRICULUM))
         self.assertTrue(all(set(c["guide"]) == {"tr", "ru"} and len(c["guide"]["tr"]) >= 5 and len(c["guide"]["ru"]) >= 5 for c in server.CURRICULUM))
-        self.assertEqual(len({c["tasks"][0]["prompt"]["tr"] for c in server.CURRICULUM}), 20)
-        self.assertEqual(len({c["tasks"][4]["starter"] for c in server.CURRICULUM}), 20)
+        self.assertEqual(len({c["tasks"][0]["prompt"]["tr"] for c in server.CURRICULUM}), len(server.CURRICULUM))
+        self.assertEqual(len({c["tasks"][4]["starter"] for c in server.CURRICULUM}), len(server.CURRICULUM))
         known = {c["id"] for c in server.CURRICULUM}
         self.assertTrue(all(set(c["prerequisites"]) <= known for c in server.CURRICULUM))
         self.assertEqual(server.CURRICULUM[0]["prerequisites"], [])

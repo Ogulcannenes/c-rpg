@@ -124,7 +124,8 @@ class MissionContractTests(unittest.TestCase):
                         self.assertEqual(result["stdout"].strip(), case["expected"].strip(), f"{category} c{index:02}, case {case_index}")
 
     def test_all_code_missions_have_rules_bilingual_content_and_distinct_bosses(self):
-        self.assertEqual((len(CURRICULUM), sum(len(c["tasks"]) for c in CURRICULUM)), (20, 160))
+        # Contracts cover the 20 core chapters; the modern track (c21-c24) has its own tests.
+        self.assertEqual((len(CURRICULUM), sum(len(c["tasks"]) for c in CURRICULUM)), (24, 192))
         self.assertEqual((len(PRACTICE), len(FIXES), len(BOSSES)), (20, 20, 20))
         for chapter, fix, practice, boss in zip(CURRICULUM, FIXES, PRACTICE, BOSSES):
             with self.subTest(chapter=chapter["id"]):
