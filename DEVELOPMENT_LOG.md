@@ -259,3 +259,26 @@ services/repositories split is incremental work for later phases.
 
 **Results (Phase 5):** full suite 233 OK / 233 OK. A third run (and a later single re-run) was stopped by
 Claude Code because the machine ran critically low on memory — not a test failure; not re-run yet.
+
+## Phase 6 (part 1) — Design system and dashboard (2026-11-21)
+
+- `web/theme.css` (loaded last): design tokens for colour, spacing, radii, type, elevation, a
+  single z-index scale and motion; shared focus ring (`:focus-visible`); `.visually-hidden`;
+  primary button now white on `#6b4fe0` (5.5:1; the audit measured 2.81:1 before); global
+  `prefers-reduced-motion` rule. Palette contrast was computed before use (muted text 8.0:1,
+  subtle 5.5:1, accent ink 9.0:1).
+- `web/dashboard.js`: new home view — continue card (current chapter, next task, chapter progress,
+  primary CTA), player card (level, XP-to-next-level bar, total XP, streak), daily quest, overall
+  progress ring, companion, review queue, recent achievements, and the chapter list as real
+  `<button>`s (the old `<article onclick>` chapter cards were not keyboard-reachable). Numbers use
+  `Intl.NumberFormat`, counts use `Intl.PluralRules` (Russian one/few/many). Text lives in
+  `locales.json` → `modules.dashboard` (tr + ru, same keys). `app.js renderHome()` delegates to it;
+  the `learning-ui.js` adaptive panel still attaches via the kept `.section-head`.
+- Removed the duplicate `cat-companion-ui.css` link, keeping the later (effective) position so the
+  cascade is unchanged.
+- Tests: `tests/test_dashboard_ui.py` (load order, no duplicate stylesheet, delegation, every copy
+  key in both languages, Russian plural forms, buttons + escaping, theme tokens/focus/motion).
+- **Not yet done:** full-suite run and browser screenshots — the machine had only ~0.7 GB free RAM
+  (earlier background runs were killed by Claude Code's low-memory guard). Targeted run:
+  `test_dashboard_ui, test_architecture, test_i18n_catalog, test_cat_companion_ui, test_cat_growth,
+  test_visual_polish, test_startup_pin` → 45 tests OK.
