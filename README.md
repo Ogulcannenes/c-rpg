@@ -102,7 +102,7 @@ Deneme yapmak için üst çubuktaki anahtar düğmesine bas ya da `Ctrl+Shift+A`
 - tüm kedi eşyalarını verme veya silme, bölüm tamamlama, tüm başarımları verme, ilerlemeyi sıfırlama
 - konfeti, kedi tepkileri, seviye atlama ve başarım bildirimi gibi animasyonları tetikleme
 
-Paneli tamamen kapatmak için uygulamayı `CPP_ADVENTURE_ADMIN=0` ortam değişkeniyle başlat; o zaman düğme görünmez ve `/api/admin` 403 döner.
+Panel varsayılan olarak **kapalıdır** (dağıtılan sürümde XP/seviye değiştirilemez). Geliştirme ve test için uygulamayı `CPP_ADVENTURE_ADMIN=1` ortam değişkeniyle başlat; aksi hâlde düğme görünmez ve `/api/admin` 403 döner.
 
 ## Test
 

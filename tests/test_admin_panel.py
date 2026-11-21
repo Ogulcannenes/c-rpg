@@ -15,6 +15,9 @@ class AdminPanelTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         server.DB_PATH = Path(cls.temp.name) / "admin.db"
+        # The panel is opt-in (CPP_ADVENTURE_ADMIN=1); these tests exercise it explicitly.
+        cls.old_admin = server.ADMIN_ENABLED
+        server.ADMIN_ENABLED = True
         server.init_db()
         cls.http = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         cls.thread = threading.Thread(target=cls.http.serve_forever, daemon=True)
@@ -25,6 +28,7 @@ class AdminPanelTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.http.shutdown()
         cls.http.server_close()
+        server.ADMIN_ENABLED = cls.old_admin
         cls.temp.cleanup()
 
     def request(self, method, path, data=None):

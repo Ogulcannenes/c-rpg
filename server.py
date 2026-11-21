@@ -46,6 +46,11 @@ COMPILER = shutil.which("g++") or shutil.which("clang++")
 DB_LOCK = threading.Lock()
 MAX_SOURCE = 20_000
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
+# Per-route request body caps; everything else is limited to 30 KB.
+POST_BODY_LIMITS = {
+    "/api/plugins/install": MAX_PLUGIN_BYTES + 2048,  # manifest + JSON envelope
+    "/api/import": 8 * 1024 * 1024,  # a full save: code, workspaces, up to 5,000 learning events
+}
 OPENAI_MODEL = os.environ.get("CPP_ADVENTURE_OPENAI_MODEL", "gpt-6-astra")
 OLLAMA_URL = os.environ.get("CPP_ADVENTURE_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_MODEL = os.environ.get("CPP_ADVENTURE_OLLAMA_MODEL", "qwen2.5-coder:3b")
@@ -155,12 +160,20 @@ extend_projects(PROJECTS)
 
 
 @contextmanager
-def db():
+def db(immediate=False):
+    """Open a connection; commit on success, roll back on any exception.
+
+    immediate=True takes SQLite's write lock (BEGIN IMMEDIATE) before the first
+    read, so read-then-award paths cannot both see "not yet awarded" when two
+    requests race. Never nest an immediate block inside another db() block.
+    """
     con = sqlite3.connect(DB_PATH, timeout=10)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA synchronous=FULL")
     con.execute("PRAGMA foreign_keys=ON")
+    if immediate:
+        con.execute("BEGIN IMMEDIATE")
     try:
         yield con
         con.commit()
@@ -406,7 +419,12 @@ def xp_for_level(level):
     return 60 * level * (level - 1)
 
 
-ADMIN_ENABLED = os.environ.get("CPP_ADVENTURE_ADMIN", "1") != "0"
+def admin_enabled_from_env(environ):
+    """The XP/level test panel is opt-in: only CPP_ADVENTURE_ADMIN=1 enables it."""
+    return str(environ.get("CPP_ADVENTURE_ADMIN", "")).strip() == "1"
+
+
+ADMIN_ENABLED = admin_enabled_from_env(os.environ)
 ADMIN_BADGES = ("first_steps","cat_coder","quest_hunter","legend","project_builder","first_boss","bug_squasher","quiz_whiz","code_runner","chapter_clear","world_explorer","boss_hunter","streak_keeper","daily_star","shop_lover","stylish_cat","algorithmist")
 
 
@@ -467,7 +485,7 @@ def state(profile_id):
         profile = dict(row)
         done = {row[0] for row in con.execute("SELECT task_id FROM completions WHERE profile_id=?", (profile_id,))}
         achievements = {row[0] for row in con.execute("SELECT id FROM achievements WHERE profile_id=?", (profile_id,))}
-        profile.pop("pin_hash", None)
+        profile["pin_protected"] = bool(profile.pop("pin_hash", ""))
     tasks = all_tasks()
     with db() as con:
         earned = max(0, base_level_xp(con, profile_id) + admin_level_bonus(con, profile_id))
@@ -673,12 +691,20 @@ def call_ai_provider(provider, prompt):
         key = claude_api_key()
         if not key:
             return {"error": "Claude API anahtarı ayarlı değil.", "unconfigured": True}
-        payload = {"model": CLAUDE_MODEL, "max_tokens": 450, "temperature": 0.3, "system": TUTOR_SYSTEM, "messages": [{"role": "user", "content": prompt}]}
+        # Haiku 5.5 rejects non-default temperature/top_p/top_k (HTTP 400) and thinks by
+        # default; a short hint needs no thinking, and "disabled" is allowed at low effort.
+        payload = {"model": CLAUDE_MODEL, "max_tokens": 450, "thinking": {"type": "disabled"}, "output_config": {"effort": "low"}, "system": TUTOR_SYSTEM, "messages": [{"role": "user", "content": prompt}]}
         request = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(payload).encode(), headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}, method="POST")
         with urllib.request.urlopen(request, timeout=30) as response:
             data = json.loads(response.read())
-        text = "".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
         usage = data.get("usage", {})
+        if data.get("stop_reason") == "refusal":
+            return {"error": "Claude bu isteği yanıtlamadı; çevrimdışı ipucu gösteriliyor.", "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
+        text = "".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
+        if not text.strip():
+            return {"error": "Claude boş yanıt döndürdü; çevrimdışı ipucu gösteriliyor.", "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
+        if data.get("stop_reason") == "max_tokens":
+            text = text.rstrip() + " …"
         return {"text": text, "model": data.get("model", CLAUDE_MODEL), "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0)}
     if provider == "ollama":
         payload = {"model": OLLAMA_MODEL, "stream": False, "messages": [{"role": "system", "content": "You are a patient C++ tutor. Reply in the requested language. Explain the real error, then offer one progressive hint. Do not give the full solution unless asked."}, {"role": "user", "content": prompt}], "options": {"temperature": 0.25}}
@@ -707,10 +733,17 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def read_json(self, max_bytes=30_000):
-        size = int(self.headers.get("Content-Length", "0"))
+        """Read a JSON object body. Raises ValueError (-> 400) on anything else."""
+        raw_size = (self.headers.get("Content-Length") or "0").strip()
+        if not raw_size.isdigit():
+            raise ValueError("Geçersiz istek uzunluğu. / Неверная длина запроса.")
+        size = int(raw_size)
         if size > max_bytes:
             raise ValueError("İstek çok büyük.")
-        return json.loads(self.rfile.read(size) or b"{}")
+        body = json.loads(self.rfile.read(size) or b"{}")
+        if not isinstance(body, dict):
+            raise ValueError("İstek gövdesi bir JSON nesnesi olmalı. / Тело запроса должно быть JSON-объектом.")
+        return body
 
     def _request_allowed(self, mutating=False):
         """Reject DNS-rebinding and cross-site requests to the local API."""
@@ -737,6 +770,17 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        """GET dispatcher with the same error policy as do_POST: always answer in JSON."""
+        try:
+            return self._route_get()
+        except (ValueError, json.JSONDecodeError) as exc:
+            return self.send_json({"error": str(exc)}, 400)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return None  # client went away; nothing left to answer
+        except Exception as exc:
+            return self.send_json({"error": f"Yerel sunucu hatası: {exc}"}, 500)
+
+    def _route_get(self):
         if not self._request_allowed(False):
             return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
@@ -1000,7 +1044,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": "İstek reddedildi."}, 403)
         path = urlparse(self.path).path
         try:
-            body = self.read_json(MAX_PLUGIN_BYTES + 2048 if path == "/api/plugins/install" else 30_000)
+            body = self.read_json(POST_BODY_LIMITS.get(path, 30_000))
             if path == "/api/arena/submit":
                 profile_id = body.get("profile_id", "")
                 challenge = daily_challenge()
@@ -1023,7 +1067,7 @@ class Handler(SimpleHTTPRequestHandler):
                 passed = sum(item["passed"] for item in cases)
                 total = len(challenge["tests"])
                 score = round(passed * 100 / total)
-                with db() as con:
+                with db(immediate=True) as con:
                     profile = valid_profile(con, profile_id)
                     if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
                     old = con.execute("SELECT attempts,best_score,best_elapsed_ms,awarded_xp FROM arena_attempts WHERE profile_id=? AND day=? AND challenge_id=?", (profile_id,challenge["day"],challenge["id"])).fetchone()
@@ -1101,6 +1145,10 @@ class Handler(SimpleHTTPRequestHandler):
                     if not current: return self.send_json({"error": "Profil bulunamadı."}, 404)
                     if not self.verify_profile_pin(current, body.get("current_pin", "")): return self.send_json({"error": "Mevcut PIN hatalı. / Текущий PIN неверен.", "pin_required": True}, 403)
                     if name and len(name) < 2: return self.send_json({"error": "İsim en az 2 karakter olmalı. / Имя должно содержать не менее 2 символов."}, 400)
+                    # Validate everything before the first write: an early return inside
+                    # `with db()` commits, so a late 400 would persist earlier changes.
+                    if pin not in ("", "REMOVE") and not re.fullmatch(r"\d{4,8}", pin):
+                        return self.send_json({"error": "PIN 4-8 rakam olmalı. / PIN должен содержать 4–8 цифр."}, 400)
                     if name:
                         con.execute("UPDATE profiles SET name=? WHERE id=?", (name, profile_id))
                     if avatar in PROFILE_AVATARS:
@@ -1131,6 +1179,8 @@ class Handler(SimpleHTTPRequestHandler):
             if path == "/api/import":
                 profile_id = body.get("profile_id")
                 data = body.get("save", {})
+                if not isinstance(data, dict) or not isinstance(data.get("profile", {}), dict):
+                    return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
                 if data.get("format") != "cpp-adventure-save" or data.get("version") != 1:
                     return self.send_json({"error": "Yedek dosyası biçimi desteklenmiyor."}, 400)
                 allowed = {t["id"] for t in all_tasks()}
@@ -1156,8 +1206,12 @@ class Handler(SimpleHTTPRequestHandler):
                 if len(done) > len(allowed) or any(item.get("task_id") not in allowed for item in done):
                     return self.send_json({"error": "Yedekte geçersiz görev kaydı var."}, 400)
                 with db() as con:
-                    if not valid_profile(con, profile_id): return self.send_json({"error": "Profil bulunamadı."}, 404)
-                    con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (int(saved.get("xp",0)), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", int(saved.get("streak",0)), str(saved.get("last_day","")), saved.get("ai_provider") if saved.get("ai_provider") in ("offline","ollama","openai","off") else "offline", profile_id))
+                    target = valid_profile(con, profile_id)
+                    if not target: return self.send_json({"error": "Profil bulunamadı."}, 404)
+                    # Import replaces the whole profile, so a PIN-protected profile must be unlocked.
+                    if not self.verify_profile_pin(target, body.get("pin", "")):
+                        return self.send_json({"error": "PIN hatalı. / Неверный PIN.", "pin_required": True}, 403)
+                    con.execute("UPDATE profiles SET xp=?,lang=?,streak=?,last_day=?,ai_provider=? WHERE id=?", (int(saved.get("xp",0)), saved.get("lang") if saved.get("lang") in ("tr","ru") else "tr", int(saved.get("streak",0)), str(saved.get("last_day","")), saved.get("ai_provider") if saved.get("ai_provider") in ("offline","ollama","openai","claude","groq","off") else "offline", profile_id))
                     con.execute("DELETE FROM completions WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM achievements WHERE profile_id=?", (profile_id,))
                     con.execute("DELETE FROM quiz_results WHERE profile_id=?", (profile_id,))
@@ -1395,7 +1449,7 @@ class Handler(SimpleHTTPRequestHandler):
                 profile_id, quest_id = body.get("profile_id"), str(body.get("quest_id", ""))
                 quest = quest_by_id(quest_id)
                 if not quest: return self.send_json({"error": "Gizli görev bulunamadı."}, 404)
-                with db() as con:
+                with db(immediate=True) as con:
                     profile = valid_profile(con, profile_id)
                     if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
                     lang = profile["lang"]
@@ -1414,7 +1468,7 @@ class Handler(SimpleHTTPRequestHandler):
             if path == "/api/shop/buy":
                 profile_id, item_id = body.get("profile_id"), body.get("item_id")
                 if item_id not in SHOP: return self.send_json({"error": "Ürün bulunamadı."}, 404)
-                with db() as con:
+                with db(immediate=True) as con:
                     profile = valid_profile(con, profile_id)
                     if not profile: return self.send_json({"error": "Profil bulunamadı."}, 404)
                     if con.execute("SELECT 1 FROM shop_items WHERE profile_id=? AND item_id=?", (profile_id,item_id)).fetchone(): return self.send_json({"error": "Bu ürün zaten sende."}, 409)
@@ -1520,10 +1574,16 @@ class Handler(SimpleHTTPRequestHandler):
                         checks.append({"name":f"Test {test_index}","passed":passed,"output":result.get("output",""),"error":result.get("error","")})
                         correct=correct and passed
                 answer_record={"question_id":question["id"],"topic":question["topic"],"kind":question["kind"],"correct":bool(correct)}
-                answers.append(answer_record)
-                score=sum(1 for item in answers if item["correct"])
-                complete=len(answers)>=len(question_ids)
-                with db() as con:
+                with db(immediate=True) as con:
+                    # Compilation ran outside the transaction; re-check under the write lock so
+                    # two submissions for the same question cannot both be recorded.
+                    current=con.execute("SELECT answers_json,completed FROM interview_sessions WHERE profile_id=? AND session_id=?",(profile_id,session_id)).fetchone()
+                    answers=json.loads(current["answers_json"]) if current else []
+                    if not current or current["completed"] or len(answers)!=index:
+                        return self.send_json({"error":"Bu soruyu sırayla yanıtla. / Ответь на вопросы по порядку."},409)
+                    answers.append(answer_record)
+                    score=sum(1 for item in answers if item["correct"])
+                    complete=len(answers)>=len(question_ids)
                     con.execute("UPDATE interview_sessions SET answers_json=?,score=?,completed=?,completed_at=CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE profile_id=? AND session_id=?",(json.dumps(answers),score,int(complete),int(complete),profile_id,session_id))
                 return self.send_json({"correct":bool(correct),"explanation":question.get("explanation",{}).get(language,""),"hint":("İpucu: çıktıyı ve her test girdisini ayrı ayrı izle." if language=="tr" else "Подсказка: проверь вывод для каждого тестового ввода отдельно." ) if question["kind"]=="code" and not correct else "","checks":checks,"score":score,"answered":len(answers),"total":len(question_ids),"complete":complete,"next_question":None if complete else public_interview_question(next(item for item in INTERVIEW_BANK if item["id"]==question_ids[len(answers)]),language)})
             if path == "/api/workspace/build":
@@ -1555,7 +1615,7 @@ class Handler(SimpleHTTPRequestHandler):
                     if not passed: break
                 passed=not missing and len(checks)==len(project["tests"]) and all(c["passed"] for c in checks)
                 score=int(100*sum(1 for c in checks if c["passed"])/len(project["tests"]))
-                with db() as con:
+                with db(immediate=True) as con:
                     if not valid_profile(con,profile_id): return self.send_json({"error":"Profil bulunamadı."},404)
                     existing=con.execute("SELECT awarded FROM project_submissions WHERE profile_id=? AND project_id=?",(profile_id,project_id)).fetchone()
                     awarded=bool(existing["awarded"]) if existing else False
@@ -1784,7 +1844,7 @@ class Handler(SimpleHTTPRequestHandler):
                         con.execute("UPDATE daily_quests SET completed=1 WHERE profile_id=? AND day=?", (profile_id, time.strftime("%Y-%m-%d")))
                     sync_achievements(con, profile_id)
                 record_learning_event(profile_id, task_id, True, "", body.get("hint_used"))
-            return self.send_json({"correct": True, "xp": reward if inserted else 0, "daily_bonus": daily_bonus if inserted else 0, "already_done": not inserted, "tests": feedback.get("checks", []) if isinstance(feedback, dict) else [], "criteria": task.get("requires", [])})
+                return self.send_json({"correct": True, "xp": reward if inserted else 0, "daily_bonus": daily_bonus, "already_done": not inserted, "tests": feedback.get("checks", []) if isinstance(feedback, dict) else [], "criteria": task.get("requires", [])})
             if path == "/api/vscode":
                 code = body.get("code", "")
                 if not isinstance(code, str) or len(code) > MAX_SOURCE:

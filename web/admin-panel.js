@@ -1,6 +1,6 @@
 // admin-panel.js — deneme yapmak için test paneli.
 // Üst çubuktaki anahtar düğmesi veya Ctrl+Shift+A ile açılır. Yalnızca etkin profili değiştirir.
-// Sunucuda CPP_ADVENTURE_ADMIN=0 ortam değişkeniyle tamamen kapatılabilir.
+// Varsayılan olarak kapalıdır; sunucu CPP_ADVENTURE_ADMIN=1 ile başlatılırsa etkinleşir.
 (() => {
   const A = (key, vars) => (window.L ? window.L(`admin.${key}`, vars) : key);
   const $ = (s, r = document) => r.querySelector(s);
