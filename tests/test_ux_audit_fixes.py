@@ -208,7 +208,7 @@ const view = { querySelector: s => (s === 'h1' ? heading : null), contains: () =
 const classes = new Set();
 global.document = {
   documentElement: { style: {} }, body: { classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)), contains: c => classes.has(c) } },
-  activeElement: null, title: '',
+  activeElement: null, title: '', querySelector: () => null,
   addEventListener: (type, fn) => listeners.push(fn),
   getElementById: id => (id === 'view-map' ? view : id === 'crumb-current' ? { textContent: 'Yolculuk' } : null),
 };

@@ -302,3 +302,9 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 .lt-console.empty { opacity: 1; color: var(--ds-text-subtle); }
 .lt-frame-name, .lt-type, .lt-addr, .lt-badge, .lt-ram-label, .dv-arrow, .adv-code-head,
 .adv-panel small, .dv-zone small, .dv-zone b { font-size: 11px; }
+
+/* UX audit round 4: top bar and content share one column; wide screens use more of the width. */
+.topbar { max-width: 1190px; width: 100%; margin-left: auto; margin-right: auto; }
+@media (min-width: 1600px) {
+  .view, .topbar { max-width: clamp(1180px, 78vw, 1480px); }
+}

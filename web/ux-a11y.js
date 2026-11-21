@@ -49,7 +49,11 @@
     window.scrollTo(0, 0);
     // Several views render right after setView (journal, labs, ...): wait for the content.
     setTimeout(() => {
-      const crumb = document.getElementById('crumb-current')?.textContent?.trim();
+      // One name per section: the breadcrumb (and so the window title) uses the sidebar label.
+      const label = document.querySelector(`.nav-item[data-view="${view}"] > span:not(:first-child)`)?.textContent?.trim();
+      const crumbEl = document.getElementById('crumb-current');
+      if (label && crumbEl) crumbEl.textContent = label;
+      const crumb = crumbEl?.textContent?.trim();
       document.title = crumb ? `${crumb} · C++ Adventure` : 'C++ Adventure';
       if (view === 'lesson') return; // renderLesson moves focus to #task-title itself
       const active = document.activeElement;

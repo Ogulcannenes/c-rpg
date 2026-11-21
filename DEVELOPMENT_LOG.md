@@ -497,3 +497,9 @@ Full report with scores, measurements and before/after screenshots: `docs/UX_AUD
 - README rewritten from scratch as a general application README: features, requirements, MSYS2 G++ setup, setup/uninstall, data and backups, AI key, building, tests, security, troubleshooting and environment variables.
 - New `SCORES.md`: quality scores per criterion and round, technical sub-scores, measured indicators, test-suite results per phase and test counts per file.
 - Full suite: **302 tests OK**.
+
+## UX audit round 4 (2026-11-21)
+
+- Wide screens: from 1600px the top bar and content share `clamp(1180px, 78vw, 1480px)`, and the top bar is aligned to the content at all widths. Verified at 1920×1080 (emulated): both span 345–1825px with no overflow. Screenshot: `docs/screenshots/ux/07-after-home-1920.jpeg`.
+- One name per section: the breadcrumb and the window title use the sidebar label (before: "Mülakat modu" in the menu, "Mülakat" in the breadcrumb). The h1 texts are unchanged.
+- Suite: **302 OK**. Not independently re-scored.
